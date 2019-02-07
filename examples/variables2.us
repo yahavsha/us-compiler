@@ -1,0 +1,8 @@
+hey
+$v1 = "hello"
+$v2 = "world"
+$v3 = $v1 + " " + $v2
+say($v3)
+$v3 = 1
+say($v3)
+byes

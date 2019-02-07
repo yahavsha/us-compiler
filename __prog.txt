@@ -1,0 +1,16 @@
+hey!
+	shh shh... milkChocolate is 1
+	woah milkChocolate is 1
+	
+	shh shh... Now we turn it into a yupyup (true) value.
+	shh shh... woah castedChocolate is (cosplay milkChocolate as Number)
+	anw milkChocolate diff 1?
+        milkChocolate is 1
+    yay!
+    gosh anw milkChocolate same 5?
+        milkChocolate is milkChocolate * 5
+    yay!
+    gosh
+        milkChocolate is 5
+    ugh!
+byes
