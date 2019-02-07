@@ -15,6 +15,9 @@ ROOT_GRAMMAR_RULE = 'program'
 # If the script DOES exists, it uses it instead.
 TEST_PROGRAM_FILE = '__prog.txt'
 
+# The language that ANTLR should create the lexer and parsers for.
+PARSED_LANGUAGE = 'JavaScript'
+
 class ConsoleColor:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -27,13 +30,14 @@ class ConsoleColor:
 
 def clean(name):
     for f in os.listdir('.'):
-        if re.match('^%s([^\.]*).(java|class|interp|tokens)$' % name, f):
+        if re.match('^%s([^\.]*).(java|js|class|interp|tokens)$' % name, f):
             os.unlink(f)
     return
 
 def build(name):
-    os.system('java -Xmx500M -cp "%s:$CLASSPATH" org.antlr.v4.Tool %s.g4' % (ANTLR_PATH, name))
-    os.system('javac %s*.java' % name)
+    os.system('java -Xmx500M -cp "%s:$CLASSPATH" org.antlr.v4.Tool %s.g4 -Dlanguage=%s' % (ANTLR_PATH, name, PARSED_LANGUAGE))
+    if PARSED_LANGUAGE == '' or PARSED_LANGUAGE == 'Java':
+        os.system('javac %s*.java' % name)
 
 def run(name, extra):
     # Gets an input from the user, till she enters an empty line
@@ -72,6 +76,7 @@ def run(name, extra):
     if not predefined_script:
         os.unlink(TEST_PROGRAM_FILE)
 
+
 if __name__ == "__main__":
     # Make sure we're with the right python version
     if sys.version_info[0] < 3:
@@ -86,6 +91,10 @@ if __name__ == "__main__":
     grammar = sys.argv[1]
     command = 'run'
     extra = 'tokens'
+    
+    if not os.path.isfile(grammar + ".g4"):
+        print('Could not find %s.g4 file!' % grammar)
+        sys.exit(1)
 
     if len(sys.argv) == 3:
         command = sys.argv[2]

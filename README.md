@@ -4,6 +4,9 @@ US is a programming language made just for us and based on our conversations sty
 The programming language is couply tied with Chocolat, so its possible to use it to ask her to perform some tasks, such as asking questions or her opinion.
 Just like it should be in an ideal world, `us` doesnt like the usage of insulting words or emojis, and the programmer should be nice to her and dont bully her. In case of bully, us will have un-predicted results 🙄🙄.
 
+- As the language doesn't use semicolons at the end, each command must be in a separate line.
+- Note to the code block prefix and suffix. Omitting a suffix (for example, a `gotcha!` in for loop) will result in a compilation error.
+
 ## Features
 - Variables
 - Comments
@@ -28,7 +31,6 @@ If the program won't be nice enough and have these prefix and suffix, it won't g
 | Answer | (Boolean) a true or false value, typed with `yupyup` (true) or `nop` (false)  |
 | Number  | Aything that goes with numbers, `1`, `3.14`, `-15`. Numbers can also have a suffix `k` for thousands or `m` for milions. For example, `5k` = `5000`. |
 | Words | (String) Double quotes wrapped characters. `"Hey"`, `"😛"`. |
-| Regex pattern | To make a regex, you should use a string with a "like that" prefix. For example, the regex `[a-zA-Z]+` should be written as `LIKE THAT /[a-zA-Z+]/`. |
 | NULL | Nothing, void. typed with `...` |
 
 ## Variables
@@ -155,13 +157,13 @@ The logical operators are:
 ## Loops
 `us` allows you to repeat a code while hiding from someone. The `hide` (equivilent to `for`) code block is
 ```
-hides while (initialization; increment) til (termination)
+hides (initialization; increment) til (termination)
 ```
 
 For example:
 ```
 hey!
-	hides while (i is 1; i++) til (i same 50)
+	hides (i is 1; i++) til (i same 50)
 		shh shh... Code
 	gotcha!
 byes
@@ -192,25 +194,57 @@ while (condition) {
 ```
 
 ## Functions
+### Decl
 Functions can be defined in `us` language as well.
-To define a function, 
+Functions can have zero or multiple arguments. In addition, functions can return a single value or not return anything.
+A return can be performed with the `gimmie` keyword, which's equivilent to `return` a statement
+
+Functions are friends who can be summoned to help you clear a hard level! 
+
+The structure is:
+```
+friend {functionName} with (argsList):
+	Code...
+hihi!
+```
+You must end the friend definition with a `hihi!` so the friend knows she's welcome to join your program! otherwise she'll be sad and won't agree to join, let aside the compiler will be angry at you.
+
+Note that the `with (argsList)` is optional, and if you don't have any arguements, you can omit it.
+
+Lets see an example:
 ```
 hey
-	look look add has (a, b) :O
+	friend add with (a, b):
 		gimme a + b
-	done!
-	look look abs has (a) :O
+	hihi!
+	friend abs with (a)
 		anw a < 0?
 			gimme -a
 		yay!
 		gosh
 			gimme a
 		ugh!
-	done!
+	hihi!
 byes
 ```
 
-To call a function, you should summon it!
+That's equivilent to:
+```javascript
+function add(a, b) {
+	return a + b;
+}
+
+function abs(a) {
+	if (a < 0) {
+		return -a;
+	} else {
+		return a;
+	}
+}
+```
+
+### Call
+To call a friend to aid you, you should summon her!
 ```
 hey
 	summons add with (1, 5)
