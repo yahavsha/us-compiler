@@ -83,9 +83,12 @@ typings/
 .DS_Store
 
 #The lib directory (contains the generated ANTLR files)
-lib/
+ast/
 .antlr/
 runtime/
+
+#Run.py trash
+__prog.txt
 
 #Node package-lock
 package-lock.json

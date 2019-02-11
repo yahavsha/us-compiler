@@ -1,7 +1,21 @@
-const USVisitor = require('../lib/usVisitor').usVisitor;
-const SymbolTable = require('../SymbolTable');
-const Parser = require('../lib/usParser').usParser;
+/*****************************************************************************
+ * Load the required libraries
+ *****************************************************************************/
+
+ const USVisitor = require('../ast/usVisitor').usVisitor;
+const SymbolTable = require('../utils/SymbolTable');
+const Parser = require('../ast/usParser').usParser;
 var antlr4 = require('antlr4/index.js');
+
+const {
+    SemanticError,
+    VariableNotDefinedError,
+    VariableAlreadyDefinedError
+} = require('./CompilationErrors');
+
+/*****************************************************************************
+ * Define our strong evaluator! ᕙ(＠°▽°＠)ᕗ
+ *****************************************************************************/
 
 /*
 * For more information and examples, read:
@@ -20,12 +34,7 @@ module.exports = class EvaluationVisitor extends USVisitor {
     }
 
     start(ctx) {
-        const path = require('path');
-        const {
-            SemanticArgumentCountMismatchError
-        } = require('../ErrorHandlers');
         // console.log(this.__getAllMethods(antlr4.error.ErrorListener));
-        return;
         return this.visitProgram(ctx);
     }
     
@@ -63,11 +72,14 @@ module.exports = class EvaluationVisitor extends USVisitor {
     visitDeclaration(ctx) {
         /* Is this a decleration or decleration + assignment? */
         if (ctx.getChild(0).getSymbol().type == Parser.VAR_DECL) {
-            let variableName = ctx.getChild(0).getText();
+            let variableLabel = ctx.getChild(1);
             /* Is this variable declared before? */
-            if (this.symTable.exists(variableName)) {
-
+            if (this.symTable.exists(variableLabel.getText())) {
+                throw new VariableAlreadyDefinedError(ctx, variableLabel);
             }
+
+            /* Add it to the table */
+            this.symTable.add(variableLabel.getText(), undefined);
         } else {
             console.log("decl + assign");
         }
@@ -76,7 +88,16 @@ module.exports = class EvaluationVisitor extends USVisitor {
     }
 
     visitAssignment(ctx) {
+        /* Get the variable itself */
         let variableLabel = ctx.getChild(0);
+
+        /* Did we defined it? we HAVE to if we're being mean! */
+        if (this.isMeanie) {
+            if (!this.symTable.exists(variableLabel.getText())) {
+                throw new VariableNotDefinedError(ctx, variableLabel);
+            }
+        }
+
         let value = this.visit(ctx.getChild(2));
         console.log(`assigning ${variableLabel} = ${value}`);
         return this.visitChildren(ctx);

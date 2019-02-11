@@ -25,6 +25,14 @@ byes
 
 If the program won't be nice enough and have these prefix and suffix, it won't get executed. Beware!
 
+## Meanie Program
+Some people like being meanie, and so does the `us` compiler.
+By specifying the `is meanie` the instruction as the very first line of the code (after the "hey!" statement, of course! U can't get meanie before saying hello, right?)
+the program will behave in more meanie and strict way.
+That means:
+- Variables must get declared before used.
+- No implict casting.
+
 ## Value types
 |  Type | Value |
 | ------------ | ------------ |

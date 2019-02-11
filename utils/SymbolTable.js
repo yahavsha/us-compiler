@@ -69,6 +69,6 @@ module.exports = class SymbolTable {
      * @returns {boolean}
      */
     exists(key) {
-        return this.find(key) !== null;
+        return Array.from(this.scopes.peek().keys()).indexOf(key) > -1;
     }
 };

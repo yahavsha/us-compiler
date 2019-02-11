@@ -1,15 +1,7 @@
-/* Make sure we already ran ANTLR */
-const fs = require("fs");
-
-if (!fs.existsSync("./ast/usLexer.js") || !fs.existsSync("./ast/usParser.js") || !fs.existsSync("./ast/usVisitor.js")) {
-    console.error("Could not find the lexer, parser or visitor file(s). Please run \"./run.py us\" first.");
-    process.exit(1);
-}
-
 /* Load the required libraries */
 const antlr4 = require('antlr4');
-const Lexer = require("./ast/usLexer");
-const Parser = require("./ast/usParser");
+const Lexer = require("../ast/usLexer");
+const Parser = require("../ast/usParser");
 
 class ErrorListener extends antlr4.error.ErrorListener {
     /**
@@ -23,7 +15,7 @@ class ErrorListener extends antlr4.error.ErrorListener {
      * @param {string} payload Stack trace
      */
     syntaxError(recognizer, symbol, line, column, message, payload) {
-        let SyntaxError = require('./interperter/CompilationErrors').SyntaxError;
+        let SyntaxError = require('./CompilationErrors').SyntaxError;
         throw new SyntaxError(recognizer, symbol, line, column, message, payload);
         console.error("line " + line + ":" + column + " " + message);
         console.log("At:");
@@ -143,7 +135,7 @@ module.exports = class Interperter {
         }
 
         /* Evaluate the code by using our evaluation visitors */
-        const Evaluator = require('./interperter/ProgramEvaluator');
+        const Evaluator = require('./ProgramEvaluator');
         const evaluator = new Evaluator();
         evaluator.start(ast);
         // console.log(Object.getOwnPropertyNames(evaluator));

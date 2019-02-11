@@ -23,7 +23,7 @@ TEST_PROGRAM_FILE = '__prog.txt'
 PARSED_LANGUAGE = 'JavaScript'
 
 # The ANTLR output directory
-OUTPUT_DIRECTORY = 'lib'
+OUTPUT_DIRECTORY = 'ast'
 
 # *******************************************************
 #                   Coloring the console
