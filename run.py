@@ -4,6 +4,10 @@ import os
 import re
 import subprocess
 
+# *******************************************************
+#                   Configuration
+# *******************************************************
+
 # The path to ANTLR
 ANTLR_PATH = '/usr/local/lib/antlr-4.7.2-complete.jar'
 
@@ -18,6 +22,14 @@ TEST_PROGRAM_FILE = '__prog.txt'
 # The language that ANTLR should create the lexer and parsers for.
 PARSED_LANGUAGE = 'JavaScript'
 
+# The ANTLR output directory
+OUTPUT_DIRECTORY = 'lib'
+
+# *******************************************************
+#                   Coloring the console
+#   Why? Cause it's cool. Kah'?
+# *******************************************************
+
 class ConsoleColor:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -28,6 +40,10 @@ class ConsoleColor:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+# *******************************************************
+#                   Helpers
+# *******************************************************
+
 def clean(name):
     for f in os.listdir('.'):
         if re.match('^%s([^\.]*).(java|js|class|interp|tokens)$' % name, f):
@@ -35,7 +51,7 @@ def clean(name):
     return
 
 def build(name):
-    os.system('java -Xmx500M -cp "%s:$CLASSPATH" org.antlr.v4.Tool %s.g4 -Dlanguage=%s' % (ANTLR_PATH, name, PARSED_LANGUAGE))
+    os.system('java -Xmx500M -cp "%s:$CLASSPATH" org.antlr.v4.Tool %s.g4 -o %s -visitor -Xexact-output-dir -Dlanguage=%s' % (ANTLR_PATH, name, OUTPUT_DIRECTORY, PARSED_LANGUAGE))
     if PARSED_LANGUAGE == '' or PARSED_LANGUAGE == 'Java':
         os.system('javac %s*.java' % name)
 
@@ -76,6 +92,10 @@ def run(name, extra):
     if not predefined_script:
         os.unlink(TEST_PROGRAM_FILE)
 
+
+# *******************************************************
+#                   Main
+# *******************************************************
 
 if __name__ == "__main__":
     # Make sure we're with the right python version

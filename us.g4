@@ -6,9 +6,12 @@ grammar us;
 
 /****************** General ******************/
 program
-   : START_PROGRAM code_block? END_PROGRAM
+   : START_PROGRAM meanie_instruction? code_block? END_PROGRAM
    ;
 
+meanie_instruction:
+    ASSIGNMENT MEANIE_PROGRAM
+    ;
 
 code_block
    : function_decl* statement+
@@ -177,6 +180,7 @@ FUNCTION_ARGS_SEP:      ',';
 FUNCTION_DECL_SUFFIX:   ':';
 FUNCTION_SUFFIX:        'hihi!';
 FUNCTION_CALL:          'summons';
+MEANIE_PROGRAM:         'meanie';
 
 // Other identifiers
 SEMICOLON               : ';';
