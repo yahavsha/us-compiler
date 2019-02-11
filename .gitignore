@@ -84,3 +84,8 @@ typings/
 
 #The lib directory (contains the generated ANTLR files)
 lib/
+.antlr/
+runtime/
+
+#Node package-lock
+package-lock.json
