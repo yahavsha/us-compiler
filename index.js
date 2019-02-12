@@ -7,6 +7,8 @@ hey
     is meanie
     sup chocolate1
     chocolate1 is 1
+    chocolate1 is 1k
+    chocolate1 is 1m
     chocolate1 is -1
 byes
 `;

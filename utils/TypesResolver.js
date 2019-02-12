@@ -1,5 +1,5 @@
  /*****************************************************************************
- * Initialization
+ * Helpers
  *****************************************************************************/
 
 /* Required libraries */
@@ -25,6 +25,28 @@ String.prototype.trimChars = function (c) {
     return this.replace(re, "");
 };
 
+/**
+ * Resolves a numeric string.
+ * @param {string} value 
+ */
+function _resolveNumber(value) {
+    /* A number might have a "k" or "m" at the end */
+    if (value.length > 1) {
+        if (value[value.length - 1] == 'k') {
+            const realNumber = Number(value.substring(0, value.length - 1));
+            return realNumber * 1000;
+        } else if (value[value.length - 1] == 'm') {
+            const realNumber = Number(value.substring(0, value.length - 1));
+            return realNumber * 1000000;
+        }
+    }
+
+    return Number(value);
+}
+
+ /*****************************************************************************
+ * Initialization
+ *****************************************************************************/
 
 const literalNames = new Parser().literalNames;
 let VALID_TYPES_MAP = {};
@@ -66,6 +88,28 @@ function isValidValueForType(type, value) {
 
 }
 
+/**
+ * Create a JavaScript value from the given type and value.
+ * @param {int} type The type.
+ * @param {String} value The value as string.
+ */
+function createJSValue(type, value) {
+    switch (type) {
+        case Parser.NUMBER:
+            return _resolveNumber(value);
+        case Parser.STRING:
+            return String(value.trimChars('"')); // Strings are wrapped in "" by definition.
+        case Parser.TRUE:
+            return true;
+        case Parser.FALSE:
+            return false;
+        case Parser.NULL:
+            return null;
+        default:
+            throw new Error(`Could not resolve the type ${type} for the value ${value}.`);
+    }
+}
+
  /*****************************************************************************
  * EXPORT
  *****************************************************************************/
@@ -73,5 +117,6 @@ function isValidValueForType(type, value) {
 module.exports = {
     isTypeSymbol,
     symbolToTypeName,
-    isValidValueForType
+    isValidValueForType,
+    createJSValue
 };

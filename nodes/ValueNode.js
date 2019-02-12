@@ -1,7 +1,8 @@
 const { Node, NodeType } = require('./Node');
 
 const {
-    symbolToTypeName
+    symbolToTypeName,
+    createJSValue
 } = require('../utils/TypesResolver');
 
 module.exports = class ValueNode extends Node {
@@ -9,7 +10,7 @@ module.exports = class ValueNode extends Node {
         super();
 
         this.type = type;
-        this.value = value;
+        this.value = createJSValue(type, value);
     }
     
     static getType() {
@@ -17,7 +18,7 @@ module.exports = class ValueNode extends Node {
     }
 
     toString() {
-        return `{ type = ${symbolToTypeName(this.type)}, value = ${this.value} }`;
+        return `${symbolToTypeName(this.type)}(${this.value})`;
     }
     
     eval() {
