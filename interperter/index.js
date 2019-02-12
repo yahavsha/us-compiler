@@ -1,17 +1,33 @@
-/* Make sure we already ran ANTLR */
-const fs = require("fs");
+/**
+ * This is the interperter module.
+ * This module uses ANTLR to perform lexical and semantical analysis
+ * and then evaluates the generated AST.
+ * @module interperter
+ * @requires ast
+ * @requires antlr4
+ * @author Yahav S.
+ */
 
-if (!fs.existsSync("./ast/usLexer.js") || !fs.existsSync("./ast/usParser.js") || !fs.existsSync("./ast/usVisitor.js")) {
-    console.error("Could not find the lexer, parser or visitor file(s). Please run \"./run.py us\" first.");
-    process.exit(1);
-}
+/*****************************************************************************
+ *  Load required libraries
+ *****************************************************************************/
 
 /* Load the required libraries */
 const antlr4 = require('antlr4');
-const Lexer = require("./ast/usLexer");
-const Parser = require("./ast/usParser");
+const Lexer = require("../ast/usLexer");
+const Parser = require("../ast/usParser");
+let {
+    SyntaxError
+ } = require('./CompilationErrors');
 
-class ErrorListener extends antlr4.error.ErrorListener {
+ /*****************************************************************************
+ * Define exceptions-based error listener for ANTLR
+ *****************************************************************************/
+
+/**
+ * Define an ANTLR listener that forward the calls into standard exceptions.
+ */
+class ExceptionsBasedErrorListener extends antlr4.error.ErrorListener {
     /**
      * Checks syntax error
      *
@@ -23,66 +39,13 @@ class ErrorListener extends antlr4.error.ErrorListener {
      * @param {string} payload Stack trace
      */
     syntaxError(recognizer, symbol, line, column, message, payload) {
-        let SyntaxError = require('./interperter/CompilationErrors').SyntaxError;
         throw new SyntaxError(recognizer, symbol, line, column, message, payload);
-        console.error("line " + line + ":" + column + " " + message);
-        console.log("At:");
-        console.log(this.__getFormattedErrorString(recognizer, line, column, symbol));
-    }
-
-    __getFormattedErrorString(recognizer, line, column, symbol) {
-        /* Defines an helper which allows to change a single char in a string.
-        As strings are immutable in JavaScript, it's impossible w/o it */
-        function setCharAt(str, index, chr) {
-            if (index > str.length-1) return str;
-            return str.substr(0,index) + chr + str.substr(index+1);
-        }
-
-        /* Gets the error line */
-        let errorLine = this.__getErrorLine(recognizer, line);
-        
-        /* Replace with spaces so we can correctly format it */
-        errorLine = errorLine.replace('\t', ' ');
-        
-        /* Create the underline string and iterate over the wrong positions */
-        let underline = ' '.repeat(errorLine.length);
-        
-        const start = symbol.start;
-        const end = symbol.stop;
-        if (start >= 0 && end >= 0) {
-            for (let i = 0; i <= (end - start); i++) {
-                underline = setCharAt(underline, column + i, '^');
-            }
-        }
-
-        /* Done */
-        return errorLine + "\n" + underline;
-    }
-
-    __getStackTrace(recognizer) {
-        if (!recognizer) {
-            return undefined;
-        }
-        
-        return recognizer.getRuleInvocationStack(recognizer.getInvokingContext());
-    }
-
-    __getErrorLine(recognizer, line) {
-        /* Validate the call */
-        if (!recognizer || !recognizer.getInputStream()) {
-            return "";
-        }
-
-        /* Grab the actual code input (the entire code contents) */
-        const tokens = new antlr4.CommonTokenStream(recognizer.getInputStream());
-        const input = recognizer.getInputStream().tokenSource.inputStream.toString()
-        
-        /* Split into lines */
-        const lines = input.split(/\r?\n/);
-
-        return lines[line - 1]; // Lines are 1...n while arrays are 0...(n-1)
     }
 }
+
+/*****************************************************************************
+ * Define the Interperter Facade class
+ *****************************************************************************/
 
 /**
  * Defines the US interperter bridging class.
@@ -96,7 +59,7 @@ module.exports = class Interperter {
      */
     constructor() {
         this.removeDefaultErrorHandlers = true;
-        this.errorListeners = [new ErrorListener()];
+        this.errorListeners = [new ExceptionsBasedErrorListener()];
         this.errorsCount = 0;
 
         this.globalVariables = {
@@ -143,10 +106,9 @@ module.exports = class Interperter {
         }
 
         /* Evaluate the code by using our evaluation visitors */
-        const Evaluator = require('./interperter/ProgramEvaluator');
-        const evaluator = new Evaluator();
+        const EvaluatorVisitor = require('./EvaluatorVisitor');
+        const evaluator = new EvaluatorVisitor();
         evaluator.start(ast);
-        // console.log(Object.getOwnPropertyNames(evaluator));
     }
 
     /**************** Private Methods *****************/
@@ -169,7 +131,7 @@ module.exports = class Interperter {
         }
 
         /* Use the proxy error listener to forward calls */
-        const ProxyErrorListener = require('antlr4/error/ErrorListener').ProxyErrorListener
+        const ProxyErrorListener = require('antlr4/error/ErrorListener').ProxyErrorListener;
         parser.addErrorListener(new ProxyErrorListener(this.errorListeners));
 
         return parser;

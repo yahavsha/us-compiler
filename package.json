@@ -5,11 +5,14 @@
   "main": "index.js",
   "scripts": {
     "build": "./run.py us build",
+    "debug": "DEBUG=us:* node index.js",
+    "prod": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Yahav S.",
   "license": "MIT",
   "dependencies": {
-    "antlr4": "^4.7.2"
+    "antlr4": "^4.7.2",
+    "debug": "^4.1.1"
   }
 }

@@ -2,10 +2,19 @@
  * Load the required libraries
  *****************************************************************************/
 
- const USVisitor = require('../ast/usVisitor').usVisitor;
+const antlr4 = require('antlr4/index.js');
+const debug = require('debug')('us:evaluator');
+
+const USVisitor = require('../ast/usVisitor').usVisitor;
 const SymbolTable = require('../utils/SymbolTable');
 const Parser = require('../ast/usParser').usParser;
-var antlr4 = require('antlr4/index.js');
+const { NodeFactory, NodeType } = require('../nodes');
+
+const {
+    isTypeSymbol,
+    symbolToTypeName,
+    isValidValueForType
+} = require('../utils/TypesResolver');
 
 const {
     SemanticError,
@@ -26,7 +35,7 @@ const {
     5. http://lolcode.org
     6. https://github.com/justinmeza/lci 
 */
-module.exports = class EvaluationVisitor extends USVisitor {
+module.exports = class EvaluatorVisitor extends USVisitor {
     constructor() {
         super();
         this.symTable = new SymbolTable();
@@ -34,10 +43,13 @@ module.exports = class EvaluationVisitor extends USVisitor {
     }
 
     start(ctx) {
+        // console.log(NodeFactory(NodeType.VARIABLE));
+        // return;
         // console.log(this.__getAllMethods(antlr4.error.ErrorListener));
         return this.visitProgram(ctx);
     }
-    
+
+    /*********************** Parsing Rules ***********************/
     visitProgram(ctx) {
         /* Enter into a scope */
         this.symTable.enterScope();
@@ -61,12 +73,18 @@ module.exports = class EvaluationVisitor extends USVisitor {
      * Visit a terminal node. We'll get here in case we're dealing with plain primitive value such as
      * number, string and variable. We'll use this method to retrieve the variable value.
      * @param {*} ctx 
+     * @return {Node} A node with the coresponding value, or undefined if we should just throw this into the trash can!
      */
     visitTerminal(ctx) {
-        console.log("Teminal Node: " + ctx.getText() + " (type: " + ctx.getSymbol().type + ")");
+        debug("Teminal Node: " + ctx.getText() + " (type: " + ctx.getSymbol().type + ")");
+        if (isTypeSymbol(ctx.getSymbol().type)) {
+            return NodeFactory(NodeType.VALUE, ctx.getSymbol().type, ctx.getText());
+        }
+
+        /*
         let innerValue = ctx.getText();
         //myString.substring(1, myString.length()-1);
-        return this.__resolveValue(innerValue, ctx.getSymbol().type);
+        // return this.__resolveValue(innerValue, ctx.getSymbol().type);*/
     }
 
     visitDeclaration(ctx) {
@@ -103,17 +121,32 @@ module.exports = class EvaluationVisitor extends USVisitor {
         return this.visitChildren(ctx);
     }
 
+    // visitSigned_atom(ctx) {
+    //     /* A signed is an atom that MIGHT have a "PLUS" or "MINUS".
+    //      * Thus, if the child[0] is a symbol, it's plus or minus.
+    //      * The atom parsing should be moved forward. */
+    //     let v = ctx.getChild(0);
+    //     // console.log("val: " + this._isSymbol(v) + " ; text : " + v.getText());
+    //     // console.log(this.__getAllMethods(v, true));
+    //     // console.log("type: " + ctx.getChild(0).parser.getType());
+    //     return;
+    // }
+
     // visitAtom(ctx) {
     //     console.log(this.visitChildren(ctx));
     //     // console.log(firstChild);
     //     // console.log("has atom: " + this.__resolveValue(ctx.getText(), 1));
     // }
 
+    /*********************** Helpers ***********************/
+    _isSymbol(node) {
+        return typeof(node.getSymbol) !== 'undefined';
+    }
 
-    __getAllMethods(object) {
+    __getAllMethods(object,everything) {
         var methods = [];
         for (var m in object) {
-            if (typeof object[m] == "function") {
+            if (everything===true||typeof object[m] == "function") {
                 methods.push(m);
             }
         }
