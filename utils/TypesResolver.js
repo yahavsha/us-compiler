@@ -9,6 +9,7 @@
 /* Required libraries */
 const Parser = require('../ast/usParser').usParser;
 const EvaluationContext = require('../interperter/EvaluationContext');
+const { Node, NodeType } = require('../nodes/Node');
 
 /* Get the parser literals */
 const literalNames = new Parser().literalNames;
@@ -66,6 +67,63 @@ function _createLiteralMap(originalMap) {
         map[originalMap[i]] = literalNames[originalMap[i]].trimChars("'");
     }
     return map;
+}
+
+/**
+ * Casts a node into a string.
+ * @param {Node} node The node to cast.
+ * @param {ParsingContext} ctx The parsing context.
+ * @return {ValueNode} The result value node.
+ */
+function _castToString(node, ctx) {
+    /* Casting to string is simple, just get the JS value and stringify it */
+    let value = node.eval();
+    return Node.getNodeFactory()({
+        ctx,
+        type: NodeType.VALUE,
+        args: [Parser.STRING, String(value)]
+    });
+}
+
+/**
+ * Casts a node into a number.
+ * @param {Node} node The node to cast.
+ * @param {ParsingContext} ctx The parsing context.
+ * @return {ValueNode} The result value node.
+ */
+function _castToNumber(node, ctx) {
+    /* We need to try to parse this into a number */
+    let numberedValue = Number(node.eval());
+
+    if (isNaN(numberedValue)) {
+        const { FormatError } = require('../interperter/CompilationErrors');
+        throw new FormatError(
+            this.context.parsingContext,
+            `Could not cast ${node} into a ${symbolToTypeName(toType)}. The given value format is incorrect.`);
+    }
+
+    /* Create the node */
+    return Node.getNodeFactory()({
+        ctx,
+        type: NodeType.VALUE,
+        args: [Parser.NUMBER, numberedValue]
+    });
+}
+
+/**
+ * Casts a node into a boolean.
+ * @param {Node} node The node to cast.
+ * @param {ParsingContext} ctx The parsing context.
+ * @return {ValueNode} The result value node.
+ */
+function _castToBoolean(node, ctx) {
+    const value = Boolean(node.eval());
+
+    return Node.getNodeFactory()({
+        ctx,
+        type: NodeType.VALUE,
+        args: [value ? Parser.TRUE : Parser.FALSE, value]
+    });
 }
 
  /*****************************************************************************
@@ -150,7 +208,13 @@ function arithmeticOperationToString(op) {
  */
 function createUSValue(value, ctx = {}) {
     const { NodeFactory, NodeType } = require('../nodes');
+    const ValueNode = require('../nodes/ValueNode');
     let type;
+
+    /* Are we a ValueNode? if so, there's no need to continue */
+    if (value instanceof ValueNode) {
+        return value;
+    }
 
     /* Why we use both typeof() and instanceof? see https://stackoverflow.com/a/7772724 */
     if (typeof(value) === 'number' || value instanceof Number) {
@@ -194,6 +258,41 @@ function createJSValue(type, value) {
     }
 }
 
+/**
+ * Cast the given value into another value.
+ * @param {Node} node The node to cast.
+ * @param {*} toType The type symbol to cast into.
+ * @param {EvaluationContext} ctx The evaluation context.
+ * @return {ValueNode} A node with the casted value.
+ * @throws InvalidCastError
+ * @throws FormatError
+ */
+function castValue(node, toType, ctx) {
+    /* Setup */
+    const ValueNode = require('../nodes/ValueNode');
+    if (!ctx) {
+        ctx = node.context;
+    }
+
+    /* If the given node isn't a value node, convert it to a value node */
+    if (!(node instanceof ValueNode)) {
+        node = node.eval();
+    }
+
+    /* What is the type we're casting into? */
+    switch (toType) {
+        case Parser.TSTRING:
+            return _castToString(node, ctx);
+        case Parser.TNUMBER:
+            return _castToNumber(node, ctx);
+        case Parser.TBOOLEAN:
+            return _castToBoolean(node, ctx);
+        default:
+            const InvalidCastError = require('../interperter/CompilationErrors').InvalidCastError;
+            throw new InvalidCastError(ctx, node.type, toType);
+    }
+}
+
  /*****************************************************************************
  * EXPORT
  *****************************************************************************/
@@ -205,5 +304,6 @@ module.exports = {
     createJSValue,
     arithmeticOperationToString,
     isOPSymbol,
-    createUSValue
+    createUSValue,
+    castValue
 };

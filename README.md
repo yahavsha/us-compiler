@@ -13,16 +13,15 @@ The language supports:
 - While loop.
 - Functions.
 
-I believes this implementation can be good for anyone who looks to start to work with ANTLR especially in NodeJS as there're barely any example on how to do it in JS.
+I believes this implementation can be a good sample for anyone who looks to start to work with ANTLR especially in NodeJS as there're barely any example on how to do it in JS.
 
-Last words: This project is dedicated to a good friend of mine who had a birthday. I made it as a birthday present form him, as he studies CS and aims to be a front-end developer.
+Last words: This project is dedicated to a good friend of mine who had a birthday. I made it as a birthday present for him, as he studies Computer Science and aims to be a pro front-end developer.
 The reserved words and general context of this langauge is based on our conversations.
-I hopes with all my heart that this project will be a good reference for him while reaching his goal, as well as any other user.
+I hopes with all my heart that this project will be a good reference for him while he reaches his goal, as well as a source for motivation.
 
+The code has been published under the MIT license. Please read the LICENSE.md file for more information.
 
-The code is published under the MIT license. Please read the LICENSE.md file for more information.
-
-**Words of thanks: Thanks to the 🍫🍫chocolates🍫🍫, who made me really happy while writing all of this code. Of course (lite) Cola helped as well, but chocolates were a requirement to make this project possible!**
+**Words of thanks: Thanks to 🍫🍫chocolates🍫🍫, who made me really happy while writing all of this code. Of course (Lite) Cola helped me as well - but chocolates were a requirement to make this project possible!**
 
 ## Principals
 US is a programming language made just for us and based on our conversations styles.
