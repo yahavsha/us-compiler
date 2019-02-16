@@ -1,4 +1,29 @@
 # Us Programming Language
+## Words of Opening, End Goal & Project Dedication
+This is an implementation of an interperter (similar to compiler, but interperts the code and execute it instead of compiles it into machine code) in plain ES6 (JavaScript) code.
+
+This implementation make use of ANTLR4 to generate a lexer, semantic parser and and AST visitor. Then, the implementation runs over the AST with an evaluation visitor and creates from it an evaluation tree. This tree can be evaluate at one as each branch evaluates the other and performs the actual commands.
+
+The language supports:
+- Types: numbers, strings, booleans.
+- Variables (Arithmetic operations).
+- Casting.
+- If-else conditions.
+- For loop.
+- While loop.
+- Functions.
+
+I believes this implementation can be good for anyone who looks to start to work with ANTLR especially in NodeJS as there're barely any example on how to do it in JS.
+
+Last words: This project is dedicated to a good friend of mine who had a birthday. I made it as a birthday present form him, as he studies CS and aims to be a front-end developer.
+The reserved words and general context of this langauge is based on our conversations.
+I hopes with all my heart that this project will be a good reference for him while reaching his goal, as well as any other user.
+
+
+The code is published under the MIT license. Please read the LICENSE.md file for more information.
+
+**Words of thanks: Thanks to the 🍫🍫chocolates🍫🍫, who made me really happy while writing all of this code. Of course (lite) Cola helped as well, but chocolates were a requirement to make this project possible!**
+
 ## Principals
 US is a programming language made just for us and based on our conversations styles.
 The programming language is couply tied with Chocolat, so its possible to use it to ask her to perform some tasks, such as asking questions or her opinion.
@@ -14,7 +39,7 @@ Just like it should be in an ideal world, `us` doesnt like the usage of insultin
 - Loops
 - Functions
 
-## Program
+### Program
 It'll be rude to start programming w/o saying hi to the compiler, so any program have to start with a hi statement. In addition, every program should be ended with a bye statement so the compiler won't get insulted.
 
 ```
@@ -25,7 +50,7 @@ byes
 
 If the program won't be nice enough and have these prefix and suffix, it won't get executed. Beware!
 
-## Meanie Program
+### Meanie Program
 Some people like being meanie, and so does the `us` compiler.
 By specifying the `is meanie` the instruction as the very first line of the code (after the "hey!" statement, of course! U can't get meanie before saying hello, right?)
 the program will behave in more meanie and strict way.
@@ -33,7 +58,7 @@ That means:
 - Variables must get declared before used.
 - No implict casting.
 
-## Value types
+### Value types
 |  Type | Value |
 | ------------ | ------------ |
 | Answer | (Boolean) a true or false value, typed with `yupyup` (true) or `nop` (false)  |
@@ -41,7 +66,7 @@ That means:
 | Words | (String) Double quotes wrapped characters. `"Hey"`, `"😛"`. |
 | NULL | Nothing, void. typed with `...` |
 
-## Variables
+### Variables
 Variables can contain one of the value types specified above.
 A variable name can be any unicode character that matches the `us` programming principals. That obviously means that variables like `🍫` are welcome!
 `us` is a weakly typed language, so no need to refer to the variable type.
@@ -68,7 +93,7 @@ But we wanna assign the variables value, right? We can do it like so:
 hey!
 	woah var1 is 5k
 	woah Var2 is "hello"
-	woah 🍫is 5m
+	woah 🍫 is 5m
 byes
 ```
 
@@ -79,7 +104,7 @@ let Var2 = "Hello";
 let chocolate = 5000000;
 ```
 
-## Casting
+### Casting
 Sometimes you'd want to make a variable takes a form of another data type. Variables can't change themseleves, but they surely can cosplay! 
 ```
 hey!
@@ -101,7 +126,7 @@ let milkChocolate = 1;
 let castedChocolate = Boolean(milkChocolate);
 ```
 
-## Conditions
+### Conditions
 You can ask to check conditions by using the condition coding blok:
 ```
 hey!
@@ -162,7 +187,7 @@ The logical operators are:
 | `nah` | `!` |
 
 
-## Loops
+### Loops
 `us` allows you to repeat a code while hiding from someone. The `hide` (equivilent to `for`) code block is
 ```
 hides (initialization; increment) til (termination)
@@ -201,7 +226,7 @@ while (condition) {
 }
 ```
 
-## Functions
+### Functions
 ### Decl
 Functions can be defined in `us` language as well.
 Functions can have zero or multiple arguments. In addition, functions can return a single value or not return anything.
@@ -266,7 +291,7 @@ add(1, 5);
 multiply(2, add(1, 1));
 ```
 
-## Comments
+### Comments
 #### Single Line Comments
 You can ask the compiler to be silent about a statement. You can do so by saying "shh shh". In that case, the rest of the line will be a comment.
 
@@ -297,5 +322,28 @@ That'd be same as (javascript):
 	And that is hidden as well.
 */
 ```
-## Built-in Functions
+
+### Built-in Functions
 The language contains some basic functions that allows it to interact with Chocolat and ask for her help!
+
+## Build the US interperter
+To have the interperter ready to work, you should have ANTLR installed and configured on your machine, as well as Python 3+.
+Then, after cloning this repository, you should run:
+```
+	$ npm run build
+```
+
+This command will run `run.py` (A python script) which executes ANTLR on the grammer file (`us.g4`) and generates the lexer and parser.
+
+## Using the interperter
+The interperter can be easily accessed to interpet US code.
+You can use the interperter class to get/set global variables, set native (js) functions that the US code can execute and evaluate code.
+
+### Evaluate (Interpert) Code
+TODO
+
+### Using Global Variables
+TODO
+
+### Exposing Native Functions
+TODO
