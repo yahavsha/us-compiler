@@ -1,9 +1,17 @@
- /*****************************************************************************
+/**
+ * This file contains helpers to work with types and symbols.
+ */
+
+/*****************************************************************************
  * Helpers
  *****************************************************************************/
 
 /* Required libraries */
 const Parser = require('../ast/usParser').usParser;
+const EvaluationContext = require('../interperter/EvaluationContext');
+
+/* Get the parser literals */
+const literalNames = new Parser().literalNames;
 
 /* At the g4 file, the types names has been defiined.
 For example, "Number", "String" etc already appears there.
@@ -44,19 +52,47 @@ function _resolveNumber(value) {
     return Number(value);
 }
 
+/**
+ * Creates a map between the original map keys and the parser literal values. Each value being access by the key of the
+ * original map value.
+ * We create map from k => v to k => literals[v] AND v => literals[v].
+ * Yes, we create two literal entities for each entity.
+ * @param {Map} originalMap 
+ */
+function _createLiteralMap(originalMap) {
+    let map = {};
+    for (let i in originalMap) {
+        map[i] = literalNames[originalMap[i]].trimChars("'");
+        map[originalMap[i]] = literalNames[originalMap[i]].trimChars("'");
+    }
+    return map;
+}
+
  /*****************************************************************************
  * Initialization
  *****************************************************************************/
 
-const literalNames = new Parser().literalNames;
-let VALID_TYPES_MAP = {};
-VALID_TYPES_MAP[Parser.NUMBER] = literalNames[Parser.TNUMBER].trimChars("'");
-VALID_TYPES_MAP[Parser.STRING] = literalNames[Parser.TSTRING].trimChars("'");
-VALID_TYPES_MAP[Parser.TRUE] = literalNames[Parser.TBOOLEAN].trimChars("'");
-VALID_TYPES_MAP[Parser.FALSE] = literalNames[Parser.TBOOLEAN].trimChars("'");
-VALID_TYPES_MAP[Parser.NULL] = literalNames[Parser.NULL].trimChars("'");
+/* Define the valid types. Almost each type has two numerical keys,
+   the actual type (NUMBER, TRUE, FALSE) and the T-Type (TSTRING, TNUMBER)
+   which represents the word that own the type (String, Number etc.).
+   Example:
+   - 15: NUMBER
+   - "Hello": STRING
+   - Words: TSTRING (the word "Words" is the symbol for String in the language).
+   - Number: TNUMBER
+   */
 
+let TYPES_MAP = {};
+TYPES_MAP[Parser.NUMBER] = Parser.TNUMBER;
+TYPES_MAP[Parser.STRING] = Parser.TSTRING;
+TYPES_MAP[Parser.TRUE] = Parser.TBOOLEAN;
+TYPES_MAP[Parser.FALSE] = Parser.TBOOLEAN;
+TYPES_MAP[Parser.NULL] = Parser.NULL;
+
+/* Create helper maps */
+let VALID_TYPES_MAP = _createLiteralMap(TYPES_MAP);
 let VALID_ARITHMETIC_OP_MAP = {};
+
 for (let token of [Parser.PLUS, Parser.MINUS, Parser.MULTIPLY, Parser.DIVIDE, Parser.POWER]) {
     VALID_ARITHMETIC_OP_MAP[token] = literalNames[token].trimChars("'");
 }
@@ -72,7 +108,15 @@ for (let token of [Parser.PLUS, Parser.MINUS, Parser.MULTIPLY, Parser.DIVIDE, Pa
 function isTypeSymbol(symbol) {
     /* Note the usage of String(symbol), as we get an int but
     The map treated our data as a string */
-    return Object.keys(VALID_TYPES_MAP).indexOf(String(symbol)) > -1;
+    return Object.keys(TYPES_MAP).indexOf(String(symbol)) > -1;
+}
+
+ /**
+  * Determine if the given symbol is a type litreal (String, Number etc.) value or not.
+  * @param {int} symbol The symbol int representation.
+  */
+function isTypeLiteralSymbol(symbol) {
+    return Object.values(TYPES_MAP).indexOf(symbol) > -1;
 }
 
 /**
@@ -91,7 +135,6 @@ function symbolToTypeName(symbol) {
     return VALID_TYPES_MAP[symbol];
 }
 
-
 /**
  * Converts the op symbol int into a type string.
  * @param {int} op The symbol int number. Should get from ANTLR parser or lexer.
@@ -101,17 +144,36 @@ function arithmeticOperationToString(op) {
 }
 
 /**
- * Determine if the given value is valid for the given type.
- * @param {string|int} type The type name or int symbol.
- * @param {*} value The value.
- * @return True if the value is valid, false otherwise.
+ * Creates a US variable from the given ES6 variable.
+ * @param {*} value The variable value.
+ * @param {*} ctx The parsing context in which the value was created within. If not provided, the variable considered to be defined at the global scope.
  */
-function isValidValueForType(type, value) {
+function createUSValue(value, ctx = {}) {
+    const { NodeFactory, NodeType } = require('../nodes');
+    let type;
 
+    /* Why we use both typeof() and instanceof? see https://stackoverflow.com/a/7772724 */
+    if (typeof(value) === 'number' || value instanceof Number) {
+        type = Parser.NUMBER;
+    } else if (typeof(value) === 'boolean' || value instanceof String) {
+        type = value ? Parser.TRUE : Parser.FALSE;
+    } else if (typeof(value) === 'string' || value instanceof String) {
+        type = Parser.STRING;
+    } else if (value === null) {
+        type = Parser.NULL;
+    } else {
+        throw new Error('Could not resolve the value: '  + value);
+    }
+
+    return NodeFactory({
+        ctx: new EvaluationContext({}, null),
+        type: NodeType.VALUE,
+        args: [type, value]
+    });
 }
 
 /**
- * Create a JavaScript value from the given type and value.
+ * Create an ES6 value from the given type and value.
  * @param {int} type The type.
  * @param {String} value The value as string.
  */
@@ -138,9 +200,10 @@ function createJSValue(type, value) {
 
 module.exports = {
     isTypeSymbol,
+    isTypeLiteralSymbol,
     symbolToTypeName,
-    isValidValueForType,
     createJSValue,
     arithmeticOperationToString,
-    isOPSymbol
+    isOPSymbol,
+    createUSValue
 };

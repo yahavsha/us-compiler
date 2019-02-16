@@ -10,6 +10,16 @@ module.exports = class Stack {
     }
 
     /**
+     * Creates a clone of this stack.
+     * @return {Stack}
+     */
+    clone() {
+        let s = new Stack();
+        s._elements = this._elements.slice(); // Copies by value: https://stackoverflow.com/a/7486130
+        return s;
+    }
+
+    /**
      * Determine whether or not the stack is empty
      * @return {boolean}
      */

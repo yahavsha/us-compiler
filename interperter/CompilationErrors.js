@@ -244,6 +244,19 @@ class DivisionByZeroError extends SemanticError {
     }
 }
 
+class InvalidCastError extends SemanticError {
+    constructor(ctx, from, to) {
+        const symbolToTypeName = require('../utils/TypesResolver').symbolToTypeName;
+        super(`Can not perform a cast from ${symbolToTypeName(from)} to ${symbolToTypeName(to)}.`, ctx);
+    }
+}
+
+class FormatError extends SemanticError {
+    constructor(ctx, message) {
+        super(message, ctx);
+    }
+}
+
 /*****************************************************************************
  * Export 'hem all
  * https://www.youtube.com/watch?v=wrCUQuJsDYI ᕙ[ ˵ ͡’ ω ͡’ ˵ ]ᕗ
@@ -255,5 +268,7 @@ class DivisionByZeroError extends SemanticError {
      VariableNotDefinedError,
      VariableAlreadyDefinedError,
      ArithmeticOperationError,
-     DivisionByZeroError
+     DivisionByZeroError,
+     InvalidCastError,
+     FormatError
  };

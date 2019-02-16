@@ -33,8 +33,6 @@ const ValueNode = require('./ValueNode');
 const VariableNode = require('./VariableNode');
 const ArithmeticOperationNode = require('./ArithmeticOperationNode');
 const CastingNode = require('./CastingNode');
-const ProgramNode = require('./ProgramNode');
-const ScopeNode = require('./ScopeNode');
 
 /**
  * Instantiate a new {@see Node} from the given node type and arguments.
@@ -51,14 +49,18 @@ function NodeFactory(options = {
     if (!options.ctx) {
         throw new Error('Can not create a node without a ParsingContext.');
     }
+
+    const EvaluationContext = require('../interperter/EvaluationContext');
+    if (!(options.ctx instanceof EvaluationContext)) {
+        throw new Error('Not EvaluationContext');
+    }
+
     /* Add the context to the args first entry */
     options.args.unshift(options.ctx);
 
     /* Resolve */
     /* @TODO transfer into a map... I hate to use switches... */
     switch (options.type) {
-        case NodeType.PROGRAM:
-            return new ProgramNode(... options.args);
         case NodeType.VALUE:
             return new ValueNode(... options.args);
         case NodeType.VARIABLE:
@@ -77,5 +79,7 @@ module.exports = {
     Node,
     NodeType,
     ValueNode,
-    VariableNode
+    VariableNode,
+    ArithmeticOperationNode,
+    CastingNode
 };

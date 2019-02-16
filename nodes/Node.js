@@ -1,11 +1,9 @@
 module.exports.NodeType = {
     UNKNOWN:                -1,
     VALUE:                  1,
-    PROGRAM:                2,
-    SCOPE:                  3,
-    VARIABLE:               4,
-    ARITHMETIC_OPERATION:   5,
-    CASTING:                6
+    VARIABLE:               2,
+    ARITHMETIC_OPERATION:   3,
+    CASTING:                4
 };
 
 class Node {

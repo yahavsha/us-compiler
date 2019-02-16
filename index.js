@@ -7,10 +7,13 @@ hey
     is meanie
     
     sup chocolate1
-    shh shh...chocolate1 is 1k
+    chocolate1 is 1k + 2k
 
-    shh shh...sup castedChocolate
-    shh shh...woah castedChocolate is (cosplay chocolate1 as Words)
+    sup chocolate2
+    woah chocolate2 is "123"
+    
+    sup castedChocolate
+    woah castedChocolate is (cosplay chocolate2 as Number)
     
     shh shh...chocolate1 is "hello: " + yupyup
     shh shh...chocolate1 is 1m

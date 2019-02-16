@@ -9,6 +9,7 @@ const debug = require('debug')('us:evaluator');
 /* The AST Classes  */
 const USVisitor = require('../ast/usVisitor').usVisitor;
 const Parser = require('../ast/usParser').usParser;
+const EvaluationContext = require('./EvaluationContext');
 
 /* Helpers */
 const SymbolTable = require('../utils/SymbolTable');
@@ -21,13 +22,12 @@ const ValueNode = require('../nodes/ValueNode');
 /* Types resolution */
 const {
     isTypeSymbol,
-    symbolToTypeName,
-    isValidValueForType
+    isTypeLiteralSymbol,
+    createJSValue,
 } = require('../utils/TypesResolver');
 
 /* Semantic Error Handlers */
 const {
-    SemanticError,
     VariableNotDefinedError,
     VariableAlreadyDefinedError
 } = require('./CompilationErrors');
@@ -35,6 +35,17 @@ const {
 /*****************************************************************************
  * Define our strong evaluator! ᕙ(＠°▽°＠)ᕗ
  *****************************************************************************/
+
+class EvaluationResult {
+    constructor(symTable) {
+        this.symTable = symTable;
+    }
+
+    getGlobalVariable(key) {
+        let result = this.symTable.find(key);
+        return createJSValue(result.type, result.value);
+    }
+}
 
 /*
 * For more information and examples, read:
@@ -46,28 +57,32 @@ const {
     6. https://github.com/justinmeza/lci 
 */
 module.exports = class EvaluatorVisitor extends USVisitor {
-    constructor() {
+    constructor(globals) {
         super();
         this.isMeanie = false;
+        this.globals = globals;
     }
 
+    /*********************** Public API ***********************/
     start(ctx) {
-        return this.visitProgram(ctx);
+        /* Initialize */
+        this.symTable = new SymbolTable();
+
+        /* Visit the root node */
+        this.visitProgram(ctx);
+
+        return new EvaluationResult(this.symTable);
     }
 
     /*********************** Parsing Rules ***********************/
     visitProgram(ctx) {
-        /* Create the main node */
-        this.root = NodeFactory({
-            ctx,
-            type: NodeType.PROGRAM,
-            args: []
-        });
+        /* Push the entire global variables so they'll be available from within our script */
+        for (let chocolate in this.globals) { // Why chocolate? cause it's tasty, duh!
+            this.symTable.set(chocolate, this.globals[chocolate]);
+        }
 
         /* Run the children statements */
-        this.visitChildren(ctx);
-        
-        return this.root;
+        return this.visitChildren(ctx);
     }
 
     /**
@@ -85,14 +100,29 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      * @return {Node} A node with the coresponding value, or undefined if we should just throw this into the trash can!
      */
     visitTerminal(ctx) {
-        debug("Teminal Node: " + ctx.getText() + " (type: " + ctx.getSymbol().type + ")");
-        if (isTypeSymbol(ctx.getSymbol().type)) {
-            return NodeFactory({ ctx, type: NodeType.VALUE, args: [ctx.getSymbol().type, ctx.getText()] });
+        /* Setup */
+        let symbolType = ctx.getSymbol().type;
+        debug("Teminal Node: " + ctx.getText() + " (type: " + symbolType + ")");
+
+        /* Is this an actual value (actual string, numbers etc.) ? */
+        if (isTypeSymbol(symbolType)) {
+            return NodeFactory({
+                ctx: this._createContext(ctx),
+                type: NodeType.VALUE,
+                args: [ctx.getSymbol().type, ctx.getText()]
+            });
         }
 
-        // if (ctx.getSymbol().type == Parser.LABEL) {
-        //     return this.symTable.find(ctx.getText());
-        // }
+        /* Is this a type literal? */
+        if (isTypeLiteralSymbol(symbolType)) {
+            return symbolType;
+        }
+
+        /* Is this a variable? */
+        if (ctx.getSymbol().type == Parser.LABEL) {
+            /* Retrieve it from the symbols table */
+            return this.symTable.find(ctx.getText());
+        }
 
         debug("Could not resolve the terminal node as it's not a symobl.");
         return undefined;
@@ -113,16 +143,16 @@ module.exports = class EvaluatorVisitor extends USVisitor {
             const variableName = variable.getText();
 
             /* Is this variable declared before? */
-            // if (this.symTable.exists(variableName)) {
-            //     throw new VariableAlreadyDefinedError(ctx, variable);
-            // }
+            if (this.symTable.exists(variableName)) {
+                throw new VariableAlreadyDefinedError(ctx, variable);
+            }
 
             /* Add it to the table */
-            // this.symTable.add(variable.getText(), NodeFactory({
-            //     ctx,
-            //     type: NodeType.VARIABLE,
-            //     args: [variableName, ValueNode.NULL]
-            // }));
+            this.symTable.set(variable.getText(), NodeFactory({
+                ctx: this._createContext(ctx),
+                type: NodeType.VARIABLE,
+                args: [variableName, ValueNode.NULL]
+            }));
         } else {
             console.log("decl + assign");
         }
@@ -141,11 +171,16 @@ module.exports = class EvaluatorVisitor extends USVisitor {
             }
         }
 
+        /* Parse the value */
         let value = ctx.getChild(2).accept(this);
-        console.log("Value: (text: \""+ ctx.getChild(2).getText() + "\"):");
-        console.log(value.toString());
-        console.log("Eval:");
-        console.log(value.eval().toString());
+        
+        /* Update the symbol table */
+        this.symTable.set(variableLabel.getText(), value);
+
+        // console.log("Value: (text: \""+ ctx.getChild(2).getText() + "\"):");
+        // console.log(value.toString());
+        // console.log("Eval:");
+        // console.log(value.eval().toString());
         return undefined;
         console.log(`assigning ${variableLabel} = ${value}`);
         return this.visitChildren(ctx);
@@ -178,13 +213,18 @@ module.exports = class EvaluatorVisitor extends USVisitor {
             if (ctx.getChild(0).getSymbol().type == Parser.MINUS) {
                 let atomValue = ctx.getChild(1).accept(this);
                 return NodeFactory({
-                        ctx,
+                        ctx: this._createContext(ctx),
                         type: NodeType.ARITHMETIC_OPERATION,
                         args: [
                             atomValue,
                             Parser.MULTIPLY,
-                            NodeFactory({ ctx, type: NodeType.VALUE, args: [Parser.NUMBER, '-1']})
-                ]});
+                            NodeFactory({
+                                ctx: this._createContext(ctx),
+                                type: NodeType.VALUE,
+                                args: [Parser.NUMBER, '-1']
+                            })
+                        ]
+                    });
             }
         }
         
@@ -224,20 +264,20 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         let variable = ctx.getChild(1).accept(this);
         let typeSymobl = ctx.getChild(3).accept(this);
 
-        console.log("variable:");
-        console.log(variable.toString());
-        process.exit(0);
-        
         /* Does the variable already exists? */
-        if (!this.symTable.exists(variable.getText())) {
+        if (!this.symTable.exists(ctx.getChild(1).getText())) {
             throw new VariableNotDefinedError(ctx, variable);
         }
 
-        return NodeFactory({
-            ctx,
+        let n = NodeFactory({
+            ctx: this._createContext(ctx),
             type: NodeType.CASTING,
             args: [variable, typeSymobl]
         });
+
+        console.log(n.toString());
+        console.log(n.eval().toString());
+        process.exit(0);
     }
 
     visitType_specifiers(ctx) {
@@ -249,6 +289,16 @@ module.exports = class EvaluatorVisitor extends USVisitor {
 
     /*********************** Helpers ***********************/
     
+    /**
+     * Creates an {@see EvaluationContext} from the given parsing context.
+     * @param {ParsingContext} ctx The parsing context.
+     */
+    _createContext(ctx) {
+        return new EvaluationContext(
+            ctx, this.symTable
+        );
+    }
+
     /**
      * Handles an expression.
      * This is an helper to handle the "expression", "multiplying_expression" and "pow_expression" rules,
@@ -282,7 +332,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
              let rparam = ctx.getChild(2).accept(this);
 
              return NodeFactory({
-                 ctx,
+                ctx: this._createContext(ctx),
                  type: NodeType.ARITHMETIC_OPERATION,
                  args: [lparam, op, rparam]
              });
@@ -314,7 +364,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     }
 
     _test(ctx) {
-        return NodeFactory({ ctx, type: NodeType.VALUE, args:[Parser.NUMBER,'123321']});
+        return NodeFactory({ ctx: this._createContext(ctx), type: NodeType.VALUE, args:[Parser.NUMBER,'123321']});
     }
 
     __getAllMethods(object,everything) {

@@ -98,13 +98,8 @@ module.exports = class ArithmeticOperationNode extends Node {
             }
         }
 
-        /* The rest of the allowed operations (e.g. with booleans) are just concats */
-        if (lparam.type == Parser.STRING || rparam.type == Parser.STRING) {
-            return this._evalStringConcat(lparam, rparam);
-        }
-
         // Operators with booleans & booleans are not allowed
-        throw new ArithmeticOperationError(this.context, lparam, this.op, rparam);
+        throw new ArithmeticOperationError(this.context.parsingContext, lparam, this.op, rparam);
     }
 
     _evalNumbers(lparam, rparam) {
@@ -121,7 +116,7 @@ module.exports = class ArithmeticOperationNode extends Node {
                 break;
             case Parser.DIVIDE:
                 if (rparam.eval() == 0) {
-                    throw new DivisionByZeroError(this.context);
+                    throw new DivisionByZeroError(this.context.parsingContext);
                 }
 
                 value = lparam.eval() / rparam.eval();
@@ -180,22 +175,9 @@ module.exports = class ArithmeticOperationNode extends Node {
             case Parser.DIVIDE:
             case Parser.MOD:
             case Parser.POWER:
-                throw new ArithmeticOperationError(this.context, lparam, this.op, rparam);
+                throw new ArithmeticOperationError(this.context.parsingContext, lparam, this.op, rparam);
             default:
                 throw new Error("Could not resolve the arithmetic operation.");
-        }
-    }
-
-    _evalStringConcat(lparam, rparam) {
-        if (this.op == Parser.PLUS) {
-            /* We need to cast the other parameter, so we'll use the casting node */
-            throw new Error('here');
-
-             return NodeFactory({
-                 ctx: this.context,
-                 type: NodeType.VALUE,
-                 args: [Parser.STRING, strParam.eval().repeat(numParam.eval())]
-             });
         }
     }
 }

@@ -40,12 +40,12 @@ module.exports = class SymbolTable {
     }
 
     /**
-     * Adds a new symbol key and the coresponding value into the symbols table.
+     * Sets a symbol key and the coresponding value in the symbols table.
      * A typical use would be to use it to register variables.
      * @param {String} key The symbol key.
      * @param {*} value The symbol value.
      */
-    add(key, value) {
+    set(key, value) {
         if (key.length > 0) {
             this.scopes.peek().set(key, value);
         }
@@ -70,5 +70,26 @@ module.exports = class SymbolTable {
      */
     exists(key) {
         return Array.from(this.scopes.peek().keys()).indexOf(key) > -1;
+    }
+
+    /**
+     * Formats the symbols table.
+     */
+    toString() {
+        let builder = 'SymbolTable(\n';
+        let scopes = this.scopes.clone();
+        
+        let i = 0;
+        while (!scopes.isEmpty()) {
+            let scope = scopes.pop();
+
+            builder += `\tScope { depth = ${i}, count = ${scope.size} } (\n`;
+            scope.forEach((v, k) => {
+                builder += `\t\t"${k}": "${v}"\n`;
+            });
+            builder += '\t)\n';
+        }
+
+        return builder + ')';
     }
 };
