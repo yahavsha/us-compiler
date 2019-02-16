@@ -1,3 +1,4 @@
+const Parser = require('../ast/usParser').usParser;
 const { Node, NodeType } = require('./Node');
 
 const {
@@ -6,8 +7,8 @@ const {
 } = require('../utils/TypesResolver');
 
 module.exports = class ValueNode extends Node {
-    constructor(type, value) {
-        super();
+    constructor(ctx, type, value) {
+        super(ctx);
 
         this.type = type;
         this.value = createJSValue(type, value);
@@ -17,7 +18,15 @@ module.exports = class ValueNode extends Node {
         return NodeType.VALUE;
     }
 
+    static get NULL() {
+        return new ValueNode({}, Parser.NULL, null);
+    }
+
     toString() {
+        if (this.type === Parser.NULL) {
+            return symbolToTypeName(this.type);
+        }
+        
         return `${symbolToTypeName(this.type)}(${this.value})`;
     }
     

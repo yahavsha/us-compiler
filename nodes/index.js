@@ -31,25 +31,44 @@
 const { Node, NodeType } = require('./Node');
 const ValueNode = require('./ValueNode');
 const VariableNode = require('./VariableNode');
+const ArithmeticOperationNode = require('./ArithmeticOperationNode');
+const CastingNode = require('./CastingNode');
+const ProgramNode = require('./ProgramNode');
+const ScopeNode = require('./ScopeNode');
 
 /**
  * Instantiate a new {@see Node} from the given node type and arguments.
- * @param {NodeType} nodeType The node type
- * @param {*} args A list of arguments that'll get sent to the node ctor.
+ * @param {object} options The creation options. They requrie a type (the node type) & args (The ctor args).
  * @return {Node} The instantiated node.
+ * 
+ * @see https://medium.com/javascript-scene/javascript-factory-functions-with-es6-4d224591a8b1 (for this Factory style implementation in ES6).
  */
-function NodeFactory(nodeType) {
-    /* The rest of the arguments are ctor params,
-    so remove the nodeType from here */
-    args = Object.values(arguments);
-    args.shift();
+function NodeFactory(options = {
+    ctx: undefined,
+    type: NodeType.UNKNOWN,
+    args: []
+} = {}) {
+    if (!options.ctx) {
+        throw new Error('Can not create a node without a ParsingContext.');
+    }
+    /* Add the context to the args first entry */
+    options.args.unshift(options.ctx);
 
     /* Resolve */
-    switch (nodeType) {
+    /* @TODO transfer into a map... I hate to use switches... */
+    switch (options.type) {
+        case NodeType.PROGRAM:
+            return new ProgramNode(... options.args);
         case NodeType.VALUE:
-            return new ValueNode(... args);
+            return new ValueNode(... options.args);
         case NodeType.VARIABLE:
-            return new VariableNode(... args);
+            return new VariableNode(... options.args);
+        case NodeType.ARITHMETIC_OPERATION:
+            return new ArithmeticOperationNode(... options.args);
+            case NodeType.CASTING:
+                return new CastingNode(... options.args);
+        default:
+            throw new Error("NodeFactory: Unknown node type requested: " + options.type);
     }
 }
 

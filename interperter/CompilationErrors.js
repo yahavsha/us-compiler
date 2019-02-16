@@ -27,16 +27,6 @@ function formatMessage(message, line, column) {
  * The basic error handler
  *****************************************************************************/
 
-function __getAllMethods(object, everything) {
-    var methods = [];
-    for (var m in object) {
-        if (everything === true || typeof object[m] == "function") {
-            methods.push(m);
-        }
-    }
-    return methods;
-}
-
 class CompilationError extends Error {
     constructor(message, code) {
         super(message);
@@ -239,6 +229,21 @@ class VariableAlreadyDefinedError extends SemanticError {
     }
 }
 
+/* Variable already been defined error */
+class ArithmeticOperationError extends SemanticError {
+    constructor(ctx, lparam, op, rparam) {
+        const { arithmeticOperationToString, symbolToTypeName } = require('../utils/TypesResolver');
+        super(`Operator ${arithmeticOperationToString(op)} can not be applied on ${symbolToTypeName(lparam.type)} (lparam) and ${symbolToTypeName(rparam.type)} (rparam).`, ctx);
+    }
+}
+
+/* Variable already been defined error */
+class DivisionByZeroError extends SemanticError {
+    constructor(ctx) {
+        super(`A divisin by zero can't be performed.`, ctx);
+    }
+}
+
 /*****************************************************************************
  * Export 'hem all
  * https://www.youtube.com/watch?v=wrCUQuJsDYI ᕙ[ ˵ ͡’ ω ͡’ ˵ ]ᕗ
@@ -248,5 +253,7 @@ class VariableAlreadyDefinedError extends SemanticError {
      SyntaxError,
      SemanticError,
      VariableNotDefinedError,
-     VariableAlreadyDefinedError
+     VariableAlreadyDefinedError,
+     ArithmeticOperationError,
+     DivisionByZeroError
  };

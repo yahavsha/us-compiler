@@ -87,7 +87,7 @@ hey!
 	woah milkChocolate is 1
 	
 	shh shh... Now we turn it into a yupyup (true) value.
-	woah u have castedChocolate with (cosplay milkChocolate as Number)
+	woah castedChocolate is (cosplay milkChocolate as Number)
 	
 byes
 ```

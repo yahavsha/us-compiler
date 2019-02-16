@@ -2,8 +2,12 @@ const { Node, NodeType } = require('./Node');
 const ValueNode = require('./ValueNode');
 
 module.exports = class VariableNode extends Node {
-    constructor(name, value) {
-        super();
+    constructor(ctx, name, value) {
+        super(ctx);
+
+        if (!(value instanceof Node)) {
+            throw new Error('VariableNode expects to get a Node as a value.');
+        }
         
         this.name = name;
         this.value = value;
@@ -11,6 +15,10 @@ module.exports = class VariableNode extends Node {
 
     static getType() {
         return NodeType.VARIABLE;
+    }
+
+    toString() {
+        return `VariableNode(name = "${this.name}", value = ${this.value} )`
     }
     
     eval() {

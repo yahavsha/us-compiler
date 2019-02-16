@@ -108,7 +108,12 @@ module.exports = class Interperter {
         /* Evaluate the code by using our evaluation visitors */
         const EvaluatorVisitor = require('./EvaluatorVisitor');
         const evaluator = new EvaluatorVisitor();
-        evaluator.start(ast);
+        
+        /* Create the AST Evaluation Node */
+        const root = evaluator.start(ast);
+
+        /* Evaluate 'hem all! */
+        root.eval();
     }
 
     /**************** Private Methods *****************/

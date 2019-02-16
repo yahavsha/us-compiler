@@ -37,7 +37,7 @@ function _resolveNumber(value) {
             return realNumber * 1000;
         } else if (value[value.length - 1] == 'm') {
             const realNumber = Number(value.substring(0, value.length - 1));
-            return realNumber * 1000000;
+            return realNumber * 1000000 ;
         }
     }
 
@@ -54,9 +54,14 @@ VALID_TYPES_MAP[Parser.NUMBER] = literalNames[Parser.TNUMBER].trimChars("'");
 VALID_TYPES_MAP[Parser.STRING] = literalNames[Parser.TSTRING].trimChars("'");
 VALID_TYPES_MAP[Parser.TRUE] = literalNames[Parser.TBOOLEAN].trimChars("'");
 VALID_TYPES_MAP[Parser.FALSE] = literalNames[Parser.TBOOLEAN].trimChars("'");
+VALID_TYPES_MAP[Parser.NULL] = literalNames[Parser.NULL].trimChars("'");
 
+let VALID_ARITHMETIC_OP_MAP = {};
+for (let token of [Parser.PLUS, Parser.MINUS, Parser.MULTIPLY, Parser.DIVIDE, Parser.POWER]) {
+    VALID_ARITHMETIC_OP_MAP[token] = literalNames[token].trimChars("'");
+}
 
- /*****************************************************************************
+/*****************************************************************************
  * The API methods
  *****************************************************************************/
 
@@ -71,11 +76,28 @@ function isTypeSymbol(symbol) {
 }
 
 /**
+ * Determine if the given symbol int is a valid operator symbol (e.g. +, -...).
+ * @param {int} symbol 
+ */
+function isOPSymbol(symbol) {
+    return Object.keys(VALID_ARITHMETIC_OP_MAP).indexOf(String(symbol)) > -1;
+}
+
+/**
  * Converts the symbol int into a type string.
  * @param {int} symbol The symbol int number. Should get from ANTLR parser or lexer.
  */
 function symbolToTypeName(symbol) {
     return VALID_TYPES_MAP[symbol];
+}
+
+
+/**
+ * Converts the op symbol int into a type string.
+ * @param {int} op The symbol int number. Should get from ANTLR parser or lexer.
+ */
+function arithmeticOperationToString(op) {
+    return VALID_ARITHMETIC_OP_MAP[op];
 }
 
 /**
@@ -104,7 +126,7 @@ function createJSValue(type, value) {
         case Parser.FALSE:
             return false;
         case Parser.NULL:
-            return null;
+            return Parser.NULL;
         default:
             throw new Error(`Could not resolve the type ${type} for the value ${value}.`);
     }
@@ -118,5 +140,7 @@ module.exports = {
     isTypeSymbol,
     symbolToTypeName,
     isValidValueForType,
-    createJSValue
+    createJSValue,
+    arithmeticOperationToString,
+    isOPSymbol
 };
