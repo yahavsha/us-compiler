@@ -16,9 +16,6 @@
 const antlr4 = require('antlr4');
 const Lexer = require("../ast/usLexer");
 const Parser = require("../ast/usParser");
-let {
-    SyntaxError
- } = require('./CompilationErrors');
 
  /* Nodes */
  const {

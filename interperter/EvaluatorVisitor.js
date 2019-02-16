@@ -21,10 +21,14 @@ const ValueNode = require('../nodes/ValueNode');
 
 /* Types resolution */
 const {
+    isOPSymbol,
     isTypeSymbol,
     isTypeLiteralSymbol,
     createJSValue,
 } = require('../utils/TypesResolver');
+
+/* Conditions */
+const { isComparatorSymbol, isLogicalOperatorSymbol } = require('../utils/ConditionsResolver');
 
 /* Semantic Error Handlers */
 const {
@@ -70,6 +74,12 @@ module.exports = class EvaluatorVisitor extends USVisitor {
 
         /* Visit the root node */
         this.visitProgram(ctx);
+        
+        console.log('');
+        console.log("==============================");
+        console.log("   Evaluation Ended");
+        console.log("==============================");
+        console.log(this.symTable.toString());
 
         return new EvaluationResult(this.symTable);
     }
@@ -113,8 +123,12 @@ module.exports = class EvaluatorVisitor extends USVisitor {
             });
         }
 
-        /* Is this a type literal? */
-        if (isTypeLiteralSymbol(symbolType)) {
+        /* If this is a type literal, logical operator or comparator operator, we should just
+        return their symbol type (the number in the Parser) */
+        if (isTypeLiteralSymbol(symbolType)
+            || isComparatorSymbol(symbolType)
+            || isLogicalOperatorSymbol(symbolType)
+            || isOPSymbol(symbolType)) {
             return symbolType;
         }
 
@@ -187,15 +201,66 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     }
 
     visitExpression(ctx) {
-        return this._handleExpression(ctx);
+        /* An expression looks like that:
+        expression :
+                multiplying_expression ((PLUS | MINUS) multiplying_expression)*
+                | expression LOGICAL_OR expression
+                | expression LOGICAL_AND expression
+                | expression COMPARE_EQUAL expression
+                | expression COMPARE_NOT_EQUAL expression
+                | expression COMPARE_GREATER expression
+                | expression COMPARE_SMALLER expression
+        
+        A multiplying expression is an expression that uses the multiply and divide operators. Why do we need these?
+        Because we want to respect the order of precedence.
+        The rest of the expressions are just nested expressions with comparison operators.
+        We need to determine which type of expression we got. If we got a comparison operator, we need to evaluate both
+        sides of the edxpression and then return the boolean value, otherwise we can just continue with arithmetic evaluation.
+
+        Thus:
+        1) If we have one child - it's a nested expression or it's childs (like label).
+        2) If we have more: We need to check if it's an arithmetic op, comparator op or logical op and act accordingly.
+        */
+
+        /* If the length === 1, then this is just a simple expression we can easily resolve */
+        if (ctx.children.length === 1) {
+            return ctx.getChild(0).accept(this);
+        }
+
+        /* If the length === 3, it can be everything from arithmetic operation to a simple condition */
+        if (ctx.children.length === 3) {
+            let op = ctx.getChild(1).accept(this); // Fetch the operator
+            console.log('op: ' + op);
+
+            /* If that's a type, handle it accorndlgly */
+            if (isOPSymbol(op) || isTypeSymbol(op)) {
+                return this._handleArithmeticExpression(ctx);
+            }
+        }
+
+        /* That's a condition */
+        return this._handleConditionExpression(ctx);
+
+        //     if (isComparatorSymbol(op)) {
+        //         let lparam = ctx.getChild(0).accept(this);
+        //         let rparam = ctx.getChild(2).accept(this);
+
+        //         return NodeFactory({
+        //             ctx: this._createContext(ctx),
+        //             type: NodeType.CONDITION_EXPR,
+        //             args: [lparam, op, rparam]
+        //         });
+        //     }
+        // }
+        // return this._handleArithmeticExpression(ctx);
     }
 
     visitMultiplying_expression(ctx) {
-        return this._handleExpression(ctx);
+        return this._handleArithmeticExpression(ctx);
     }
 
     visitPow_expression(ctx) {
-        return this._handleExpression(ctx);
+        return this._handleArithmeticExpression(ctx);
     }
 
     visitSigned_atom(ctx) {
@@ -287,6 +352,103 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         return ctx.getChild(0).accept(this);
     }
 
+    visitCondition_block(ctx) {
+        /**
+         * This is an if-else condition.
+         * The rule structure is:
+         * 1) IF conditional_expression CONDITION_SUFFIX statement* IF_SUFFIX
+         * 2) IF conditional_expression CONDITION_SUFFIX statement* IF_SUFFIX (ELSE condition_block)? ELSE statement* ELSE_SUFFIX
+         * 
+         * Thus our childs are:
+         * - #1: The condition expression itself.
+         * - #3: The if-true block.
+         * - 
+         */
+        
+        /* Parse the condition expression */
+        let conditionsNode = ctx.getChild(1).accept(this);
+        console.log('got expression');
+        console.log(conditionsNode.toString());
+        console.log(conditionsNode.eval().toString());
+        process.exit(0);
+    }
+
+    visitConditional_expression(ctx) {
+        /**
+         * Each condition might have multiple rules, seperated by logical operations.
+         * Thus, to keep the and and or rules in order, we seperated them into 2 rules.
+         * This rule is:
+         *  and_chained_conditional_expression (LOGICAL_AND and_chained_conditional_expression)*
+         * 
+         * Thus:
+         * 1) If we only have a simple expression, we'll have only one child.
+         * 2) If we'll have multiple expression, then
+         *      - Even indexes (0, 2, 4) will have the condition itself
+         *      - Odd indexes will have the logical operator.
+         */
+
+        if (ctx.children.length === 1) {
+            /* This is a simple condition */
+            let expr = ctx.getChild(0).accept(this);
+
+            return NodeFactory({
+                ctx: this._createContext(ctx),
+                type: NodeType.CONDITION,
+                args: [expr]
+            });
+        }
+
+        
+
+        /* Iterate over the nested conditions and build them.
+            Remember that even indexes has the conditions and odd indexes has the 
+            logical operatos. In addition, we'll always have odd length of childs
+            as we have two conditions + one logical operator.
+            For example:
+            if (expr1 && expr2 && expr3)
+            There're 3 expressions + 2 logical operators = 5 childrens.
+            Lastly, note that we go in reverse order to build everything, as we need to respect the order of precendence
+            in the evaluation process.
+            */
+        let condition = NodeFactory({
+            ctx: this._createContext(ctx),
+            type: NodeType.CONDITION,
+            args: [ctx.getChild(ctx.children.length - 1).accept(this)]
+        });
+
+        for (let i = ctx.children.length - 2; i >= 0; i -= 2) { // length - 2 instead of length - 1 as we already took the last expr.
+            /* Get the data */
+            let op = ctx.getChild(i).accept(this);
+            let expr = ctx.getChild(i - 1).accept(this);
+
+            /* Chain the condition */
+            condition = NodeFactory({
+                ctx: this._createContext(ctx),
+                type: NodeType.CONDITION,
+                args: [expr, op, condition]
+            });
+        }
+        console.log("condition:");
+        console.log(condition.toString());
+        process.exit(0);
+    }
+
+    visitAnd_chained_conditional_expression(ctx) {
+        /**
+         * This is an "and condition". It might have multiple or rules and a "not" logical unary operator.
+         * The rule is:
+         *  LOGICAL_NOT? expression (LOGICAL_OR LOGICAL_NOT? expression)*
+         * 
+         * Thus our childs depend if we got a LOGICAL_NOT at the start or not.
+         */
+
+        if (this._isSymbol(ctx.getChild(0))) {
+            // We got a logical not at the first of the expression.
+        } else {
+            return ctx.getChild(0).accept(this);
+        }
+    }
+
     /*********************** Helpers ***********************/
     
     /**
@@ -300,12 +462,21 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     }
 
     /**
-     * Handles an expression.
+     * Handles a condition expression.
+     * @param {ParsingContext} ctx 
+     */
+    _handleConditionExpression(ctx) {
+        this._printChilds(ctx);
+        process.exit(0);
+    }
+
+    /**
+     * Handles an arithmetic expression.
      * This is an helper to handle the "expression", "multiplying_expression" and "pow_expression" rules,
      * as all of their logic is basically the same.
      * @param {ParsingContext} ctx 
      */
-    _handleExpression(ctx) {
+    _handleArithmeticExpression(ctx) {
         /**
          * An expression is a matematical style written content that get evaluated
          * by the math rules (* / before + -).
@@ -325,7 +496,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         
          // Do we got the (lparam op rparam) writestyle or we
          // just forward to lparam?
-         if (ctx.getChild(1)) {
+         if (ctx.children.length === 3) {
              /* Get the lparam, rparam and the op */
              let lparam = ctx.getChild(0).accept(this);
              let op = ctx.getChild(1).getSymbol().type;
@@ -336,7 +507,6 @@ module.exports = class EvaluatorVisitor extends USVisitor {
                  type: NodeType.ARITHMETIC_OPERATION,
                  args: [lparam, op, rparam]
              });
-             process.exit(0);
          }
 
          /* We don't do an arithmetic operation, so just forward */

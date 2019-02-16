@@ -12,12 +12,22 @@ hey
     sup chocolate2
     woah chocolate2 is "123"
     
-    sup castedChocolate
-    woah castedChocolate is (cosplay chocolate2 as Number)
+    anw chocolate1 big 2k also chocolate1 small 4k also chocolate2 same "123"?
+        chocolate1 is chocolate1 * 3
+    yay!
+
+    BARRIER!
+    anw chocolate1 big 2k also chocolate1 small 4k also chocolate2 same "123"?
+        chocolate1 is chocolate1 * 3
+    yay!
     
-    shh shh...chocolate1 is "hello: " + yupyup
-    shh shh...chocolate1 is 1m
-    shh shh...chocolate1 is -1
+        sup castedChocolate
+        woah castedChocolate is (cosplay chocolate2 as Number)
+        
+        chocolate1 is "hello: " + yupyup
+        chocolate1 is 1m
+        chocolate1 is -1
+    RELEASE!
 byes
 `;
 

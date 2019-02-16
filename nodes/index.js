@@ -33,6 +33,8 @@ const ValueNode = require('./ValueNode');
 const VariableNode = require('./VariableNode');
 const ArithmeticOperationNode = require('./ArithmeticOperationNode');
 const CastingNode = require('./CastingNode');
+const ConditionalExpressionNode = require('./ConditionalExpressionNode');
+const ConditionNode = require('./ConditionNode');
 
 /**
  * Instantiate a new {@see Node} from the given node type and arguments.
@@ -67,8 +69,12 @@ function NodeFactory(options = {
             return new VariableNode(... options.args);
         case NodeType.ARITHMETIC_OPERATION:
             return new ArithmeticOperationNode(... options.args);
-            case NodeType.CASTING:
-                return new CastingNode(... options.args);
+        case NodeType.CASTING:
+            return new CastingNode(... options.args);
+        case NodeType.CONDITION_EXPR:
+            return new ConditionalExpressionNode(... options.args);
+        case NodeType.CONDITION:
+            return new ConditionNode(... options.args);
         default:
             throw new Error("NodeFactory: Unknown node type requested: " + options.type);
     }

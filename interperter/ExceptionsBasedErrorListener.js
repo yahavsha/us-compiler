@@ -1,5 +1,7 @@
 const antlr4 = require('antlr4');
 
+let { SyntaxError } = require('./CompilationErrors');
+
  /*****************************************************************************
  * Define exceptions-based error listener for ANTLR
  *****************************************************************************/

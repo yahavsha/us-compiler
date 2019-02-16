@@ -30,6 +30,7 @@ Just like it should be in an ideal world, `us` doesnt like the usage of insultin
 
 - As the language doesn't use semicolons at the end, each command must be in a separate line.
 - Note to the code block prefix and suffix. Omitting a suffix (for example, a `gotcha!` in for loop) will result in a compilation error.
+- The indentations used in the examples are there just to make the code pretty. You don't **have** to use them. But they're cute, aren't they?
 
 ## Features
 - Variables

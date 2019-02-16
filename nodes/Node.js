@@ -3,7 +3,9 @@ module.exports.NodeType = {
     VALUE:                  1,
     VARIABLE:               2,
     ARITHMETIC_OPERATION:   3,
-    CASTING:                4
+    CASTING:                4,
+    CONDITION_EXPR:         5,
+    CONDITION:              6
 };
 
 class Node {

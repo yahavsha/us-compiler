@@ -10,6 +10,7 @@
 const Parser = require('../ast/usParser').usParser;
 const EvaluationContext = require('../interperter/EvaluationContext');
 const { Node, NodeType } = require('../nodes/Node');
+const { trimChars, createLiteralMap } = require('./ParsingHelpers');
 
 /* Get the parser literals */
 const literalNames = new Parser().literalNames;
@@ -23,16 +24,6 @@ the already defined values at g4.
 1) We can access these values from literalNames.
 2) We must notice that antlr wrap them in '', thus we need to remove them.
 */
-
-/**
- * Trim the given characters from the string.
- * @param {string} c The characters to trim.
- * @return The trimmed string.
- */
-String.prototype.trimChars = function (c) {
-    var re = new RegExp("^[" + c + "]+|[" + c + "]+$", "g");
-    return this.replace(re, "");
-};
 
 /**
  * Resolves a numeric string.
@@ -51,22 +42,6 @@ function _resolveNumber(value) {
     }
 
     return Number(value);
-}
-
-/**
- * Creates a map between the original map keys and the parser literal values. Each value being access by the key of the
- * original map value.
- * We create map from k => v to k => literals[v] AND v => literals[v].
- * Yes, we create two literal entities for each entity.
- * @param {Map} originalMap 
- */
-function _createLiteralMap(originalMap) {
-    let map = {};
-    for (let i in originalMap) {
-        map[i] = literalNames[originalMap[i]].trimChars("'");
-        map[originalMap[i]] = literalNames[originalMap[i]].trimChars("'");
-    }
-    return map;
 }
 
 /**
@@ -148,11 +123,11 @@ TYPES_MAP[Parser.FALSE] = Parser.TBOOLEAN;
 TYPES_MAP[Parser.NULL] = Parser.NULL;
 
 /* Create helper maps */
-let VALID_TYPES_MAP = _createLiteralMap(TYPES_MAP);
+let VALID_TYPES_MAP = createLiteralMap(TYPES_MAP);
 let VALID_ARITHMETIC_OP_MAP = {};
 
 for (let token of [Parser.PLUS, Parser.MINUS, Parser.MULTIPLY, Parser.DIVIDE, Parser.POWER]) {
-    VALID_ARITHMETIC_OP_MAP[token] = literalNames[token].trimChars("'");
+    VALID_ARITHMETIC_OP_MAP[token] = trimChars(literalNames[token], "'");
 }
 
 /*****************************************************************************
@@ -246,7 +221,7 @@ function createJSValue(type, value) {
         case Parser.NUMBER:
             return _resolveNumber(value);
         case Parser.STRING:
-            return String(value.trimChars('"')); // Strings are wrapped in "" by definition.
+            return String(trimChars(value, '"')); // Strings are wrapped in "" by definition.
         case Parser.TRUE:
             return true;
         case Parser.FALSE:

@@ -19,7 +19,6 @@ code_block
    
 statement
    : comment
-   | expression
    | declaration
    | assignment
    | condition_block
@@ -45,13 +44,112 @@ assignment
    ;
 
 /****************** Expressions ******************/
-expression
-   :
-   multiplying_expression ((PLUS | MINUS) multiplying_expression)*
-   ;
 
-casting
-    : VAR_CAST LABEL VAR_CAST_TO type_specifiers
+expression
+    :   assignment_expression
+    |   expression ',' assignment_expression
+    ;
+
+assignment_expression
+    :   conditional_expression
+    // |   unaryExpression assignmentOperator assignmentExpression
+    // |   DigitSequence // for
+    ;
+
+conditional_expression
+    :   logical_or_expression //('?' expression ':' conditionalExpression)?
+    ;
+
+logical_or_expression
+    :   logical_and_expression
+    |   logical_or_expression LOGICAL_OR logical_or_expression
+    ;
+
+logical_and_expression
+    :   inclusive_or_expression
+    |   logical_and_expression LOGICAL_AND logical_and_expression
+    ;
+
+inclusive_or_expression
+    :   exclusive_or_expression
+    |   inclusive_or_expression '|' inclusive_or_expression
+    ;
+
+exclusive_or_expression
+    :   and_expression
+    |   exclusive_or_expression '^' exclusive_or_expression
+    ;
+
+and_expression
+    :   equality_expression
+    |   and_expression '&' and_expression
+    ;
+
+equality_expression
+    :   relational_expression
+    |   equality_expression COMPARE_EQUAL equality_expression
+    |   equality_expression COMPARE_NOT_EQUAL equality_expression
+    ;
+
+relational_expression
+    :   shift_expression
+    |   relational_expression '<' relational_expression
+    |   relational_expression '>' relational_expression
+    |   relational_expression '<=' relational_expression
+    |   relational_expression '>=' relational_expression
+    ;
+
+shift_expression
+    :   additive_expression
+    |   shift_expression '<<' shift_expression
+    |   shift_expression '>>' shift_expression
+    ;
+
+additive_expression
+    :   multiplicative_expression
+    |   additive_expression '+' additive_expression
+    |   additive_expression '-' additive_expression
+    ;
+
+
+multiplicative_expression
+    :   power_expression
+    |   multiplicative_expression '*' multiplicative_expression
+    |   multiplicative_expression '/' multiplicative_expression
+    |   multiplicative_expression '%' multiplicative_expression
+    ;
+
+power_expression
+    : cast_expression
+    | power_expression POWER power_expression
+    ;
+    
+cast_expression
+    :   unary_expression
+    |   VAR_CAST cast_expression VAR_CAST_TO type_specifiers
+    ;
+
+unary_expression
+    :   postfix_expression
+    |   PLUS unary_expression
+    |   MINUS unary_expression
+    ;
+
+postfix_expression
+    :   primary_expression
+    |   postfix_expression '++'
+    |   postfix_expression '--'
+    ;
+
+primary_expression
+    : LABEL
+    | NUMBER
+    | STRING
+    | NULL
+    | TRUE
+    | FALSE
+    | LPAREN expression RPAREN
+    | function_call
     ;
 
 type_specifiers
@@ -60,39 +158,13 @@ type_specifiers
     | TBOOLEAN
     ;
 
-multiplying_expression
-    : pow_expression ((MULTIPLY | DIVIDE) pow_expression)*
-    ;
-
-
-pow_expression
-    : signed_atom (POWER signed_atom)*
-    ;
-
-signed_atom
-    : PLUS signed_atom
-    | MINUS signed_atom
-    | atom
-    ;
-
-atom
-    : LABEL
-    | NUMBER
-    | STRING
-    | NULL
-    | TRUE
-    | FALSE
-    | LPAREN expression RPAREN
-    | casting
-    | function_call
-    ;
 
 /****************** Control Flows ******************/
 
 // If-Else
 condition_block
-    : IF conditional_expression CONDITION_SUFFIX statement* IF_SUFFIX
-    | IF conditional_expression CONDITION_SUFFIX statement* IF_SUFFIX (ELSE condition_block)? ELSE statement* ELSE_SUFFIX
+    : IF expression CONDITION_SUFFIX statement* IF_SUFFIX
+    | IF expression CONDITION_SUFFIX statement* IF_SUFFIX (ELSE condition_block)? ELSE statement* ELSE_SUFFIX
     ;
 
 // For loop
@@ -102,24 +174,24 @@ for_block
 
 // While
 while_block
-    : WHILE conditional_expression CONDITION_SUFFIX statement* WHILE_SUFFIX
+    : WHILE expression CONDITION_SUFFIX statement* WHILE_SUFFIX
     ;
 
 /****************** Conditions Definitions ******************/
-conditional_expression
-    : and_chained_conditional_expression (LOGICAL_AND and_chained_conditional_expression)*
-    ;
+// conditional_expression
+//     : and_chained_conditional_expression (LOGICAL_AND and_chained_conditional_expression)*
+//     ;
 
-and_chained_conditional_expression
-    : LOGICAL_NOT? single_conditional_expression (LOGICAL_OR LOGICAL_NOT? single_conditional_expression)*
-    ;
+// and_chained_conditional_expression
+//     : single_conditional_expression (LOGICAL_OR single_conditional_expression)*
+//     ;
 
-single_conditional_expression
-    : expression COMPARE_EQUAL expression
-    | expression COMPARE_NOT_EQUAL expression
-    | expression COMPARE_GREATER expression
-    | expression COMPARE_SMALLER expression
-    ;
+// single_conditional_expression
+//     : expression COMPARE_EQUAL expression
+//     | expression COMPARE_NOT_EQUAL expression
+//     | expression COMPARE_GREATER expression
+//     | expression COMPARE_SMALLER expression
+//     ;
 
 
 /****************** Functions ******************/
