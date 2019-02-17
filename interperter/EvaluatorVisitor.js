@@ -324,6 +324,51 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     }
     
     /**
+     * Executed when a for loop is being performed.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        for_block
+            : FOR LPAREN expression? SEMICOLON expression? RPAREN FOR_TERMINATOR LPAREN expression RPAREN scope* FOR_SUFFIX
+        ;
+     * </code>
+     */
+    visitFor_block(ctx) {
+        /* Setup */
+        let indexDiff = 0; // That'll sync the children index in case some expressions are missing (like ("for (;;)"))
+        let initialization = undefined;
+        let condition = undefined;
+        let increment = undefined;
+
+        /* Do we have an initialization? */
+        if (ctx.getChild(2)) {
+            initialization = ctx.getChild(2).accept(this);
+        } else {
+            --indexDiff;
+        }
+
+        /* Do we have an increment? */
+        if (ctx.getChild(4 + indexDiff)) {
+            increment = ctx.getChild(4 + indexDiff).accept(this);
+        } else {
+            --indexDiff;
+        }
+
+        console.log(this.symTable.toString());
+        
+        console.log(`
+            Content: ${ctx.getText()}
+
+            init: ${initialization}
+            cond: ${condition}
+            inc:  ${increment}
+        `);
+        process.exit(0);
+        
+    }
+    
+    /**
      * Executed when an expression is being performed.
      * @param {ParsingContext} ctx The parsing context.
      * @return {Node} The result node.
@@ -652,7 +697,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
             /* Update the variable and return IT instead. That'll allow to chain --++++-- etc. Otherwise, we'll
             stop after one unary op as we'll have arithmetic node and not variable node */
             this._setVariable(ctx, expr.name, value);
-            return expr;
+            // return expr;
         }
 
         /* Return it */

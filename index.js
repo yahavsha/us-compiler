@@ -6,8 +6,13 @@ let input = `
 hey
     is meanie
     
-    i is 1
-    ++i++
+    sum is 1
+
+	hides (i is 1; ++i) til (i same 50)
+        sum is sum + i
+        sum is sum + 1
+    foundya!
+
 
 
     BARRIER! 
