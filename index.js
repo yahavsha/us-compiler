@@ -7,7 +7,11 @@ hey
     is meanie
     
     sup chocolate1
-    chocolate1 is 1k same 2k
+    shh shh...chocolate1 is 1k same 2k also 2k diff 3k also 3k same 2k
+    chocolate1 is 5k
+
+    sup castedChocolate
+    woah castedChocolate is (cosplay chocolate1 as Words)
 
     BARRIER!
     sup chocolate2

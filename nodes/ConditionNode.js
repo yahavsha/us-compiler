@@ -17,8 +17,8 @@ module.exports = class ConditionNode extends Node {
     constructor(ctx, expression, logicalOp, chainedExpression) {
         super(ctx);
 
-        if (!(expression instanceof ConditionalExpressionNode)) {
-            console.log(expression);
+        if (!(chainedExpression instanceof ConditionalExpressionNode)
+                && !(chainedExpression instanceof ConditionNode)) {
             throw new Error('The given expression must be a ConditionalExpressionNode');
         }
 
@@ -28,7 +28,8 @@ module.exports = class ConditionNode extends Node {
                 throw new Error('The given symbol isn\'t a logical operator.');
             }
 
-            if (!(chainedExpression instanceof ConditionNode)) {
+            if (!(chainedExpression instanceof ConditionalExpressionNode)
+                && !(chainedExpression instanceof ConditionNode)) {
                 throw new Error('The given chained expression must be a ConditionNode');
             }
         }

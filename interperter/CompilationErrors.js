@@ -168,6 +168,10 @@ class SyntaxError extends CompilationError {
             this.start = ctx.start.start;
             this.stop = ctx.stop.stop;
         } else if (typeof(column) === 'object') {
+            while (column && !column.symbol) { // This will allow to send a general parsing context and will find the terminal node of the variable.
+                column = column.getChild(0);
+            }
+
             const symbol = column.symbol;
 
             this.column = symbol.column;

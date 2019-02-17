@@ -147,7 +147,13 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         /* Is this a variable? */
         if (ctx.getSymbol().type == Parser.LABEL) {
             /* Retrieve it from the symbols table */
-            return this.symTable.find(ctx.getText());
+            let value = this.symTable.find(ctx.getText());
+            if (value === null) {
+                console.log('no variable: ' + ctx.getText());
+                throw new VariableNotDefinedError(ctx, ctx);
+            }
+
+            return value;
         }
 
         debug("Could not resolve the terminal node as it's not a symobl.");
@@ -185,6 +191,11 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         if (this._isSymbol(ctx.getChild(0))) {
             /* Is this a plain variable decl or should we parse the assignment_expression? */
             if (ctx.getChild(0).getSymbol().type == Parser.VAR_DECL) {
+                /* Is this variable declared before? */
+                if (this.symTable.exists(ctx.getChild(1).getText())) {
+                    throw new VariableAlreadyDefinedError(ctx, ctx.getChild(1));
+                }
+
                 /* Plain variable declaration */
                 return this._setVariable(ctx, ctx.getChild(1));
             } else {
@@ -218,10 +229,10 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         }
 
         /* Gets the variable & the value */
-        // let variable = ctx.getChild(0).accept(this);
+        let variable = ctx.getChild(0);
         let value = ctx.getChild(2).accept(this);
-        console.log(`Value: ${value}`);
-        process.exit(0);
+        
+        this._setVariable(ctx, variable, value);
     }
 
     /**
@@ -252,7 +263,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      * </code>
      */
     visitLogical_or_expression(ctx) {
-        return ctx.getChild(0).accept(this);
+        return this._handleChainedConditionExpression(ctx);
     }
 
     /**
@@ -268,7 +279,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      * </code>
      */
     visitLogical_and_expression(ctx) {
-        return ctx.getChild(0).accept(this);
+        return this._handleChainedConditionExpression(ctx);
     }
 
     /**
@@ -285,7 +296,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      * </code>
      */
     visitEquality_expression(ctx) {
-        return ctx.getChild(0).accept(this);
+        return this._handleSingleConditionExpression(ctx);
     }
 
     /**
@@ -304,7 +315,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      * </code>
      */
     visitRelational_expression(ctx) {
-        return ctx.getChild(0).accept(this);
+        return this._handleSingleConditionExpression(ctx);
     }
 
     /**
@@ -364,14 +375,27 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      * @return {Node} The result node.
      * @description The invoking rule is:
      * <code>
-        power_expression
-            : cast_expression
-            | power_expression POWER power_expression
+        cast_expression
+            :   unary_expression
+            |   VAR_CAST cast_expression VAR_CAST_TO type_specifiers
             ;
      * </code>
      */
     visitCast_expression(ctx) {
-        return ctx.getChild(0).accept(this);
+        /* Forward? */
+        if (ctx.children.length === 1) {
+            return ctx.getChild(0).accept(this);
+        }        
+
+        /* Get the casted expression and the type symbol */
+        let expr = ctx.getChild(1).accept(this);
+        let typeSymobl = ctx.getChild(3).accept(this);
+
+        return NodeFactory({
+            ctx: this._createContext(ctx),
+            type: NodeType.CASTING,
+            args: [expr, typeSymobl]
+        });
     }
 
     /**
@@ -538,11 +562,6 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     _setVariable(ctx, variableContext, value) {
         const variableName = variableContext.getText();
 
-        /* Is this variable declared before? */
-        if (this.isMeanie && this.symTable.exists(variableName)) {
-            throw new VariableAlreadyDefinedError(ctx, variableContext);
-        }
-
         /* Did we got a value? */
         if (!value) {
             value = NodeFactory({
@@ -596,12 +615,53 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     }
 
     /**
-     * Handles a condition expression.
+     * Handles a single condition expression.
+     * This function is being used to handle the comparison operators (foo < bar, foo == bar, foo != bar etc.)
      * @param {ParsingContext} ctx 
      */
-    _handleConditionExpression(ctx) {
-        this._printChilds(ctx);
-        process.exit(0);
+    _handleSingleConditionExpression(ctx) {
+        /** The idea here is very similiar to _handleArithmeticExpression, so see the explanation there :sweat_smile: */
+        
+        /* Forward the call? */
+        if (ctx.children.length === 1) {
+            return ctx.getChild(0).accept(this);            
+        }
+
+        /* Evaluate the left and right expressions */
+        let lexpr = ctx.getChild(0).accept(this);
+        let op = ctx.getChild(1).accept(this);
+        let rexpr = ctx.getChild(2).accept(this);
+
+        /* And create the actual condition */
+        return NodeFactory({
+            ctx: this._createContext(ctx),
+            type: NodeType.CONDITION_EXPR,
+            args: [lexpr, op, rexpr]
+        });
+    }
+
+    /**
+     * Handles a chained condition expression.
+     * This function is being used to handle the logical operators (a && b, b || c).
+     * @param {ParsingContext} ctx 
+     */
+    _handleChainedConditionExpression(ctx) {
+        /* Forward the call? */
+        if (ctx.children.length === 1) {
+            return ctx.getChild(0).accept(this);            
+        }
+
+        /* Evaluate the left and right expressions */
+        let lexpr = ctx.getChild(0).accept(this);
+        let op = ctx.getChild(1).accept(this);
+        let rexpr = ctx.getChild(2).accept(this);
+
+        /* And create the actual condition */
+        return NodeFactory({
+            ctx: this._createContext(ctx),
+            type: NodeType.CONDITION,
+            args: [lexpr, op, rexpr]
+        });
     }
 
     /**
