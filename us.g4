@@ -6,15 +6,19 @@ grammar us;
 
 /****************** General ******************/
 program
-   : START_PROGRAM meanie_instruction? code_block? END_PROGRAM
+   : START_PROGRAM meanie_instruction? global_scope? END_PROGRAM
    ;
 
 meanie_instruction:
     ASSIGNMENT MEANIE_PROGRAM
     ;
 
-code_block
-   : function_decl* statement+
+global_scope
+   : function_decl* scope
+   ;
+   
+scope
+   : statement+
    ;
    
 statement
@@ -166,20 +170,20 @@ type_specifiers
 
 // If-Else
 condition_block
-    : IF expression CONDITION_SUFFIX statement* IF_SUFFIX
-    | IF expression CONDITION_SUFFIX statement* IF_SUFFIX ELSE condition_block
-    | IF expression CONDITION_SUFFIX statement* IF_SUFFIX ELSE condition_block ELSE statement* ELSE_SUFFIX
-    | IF expression CONDITION_SUFFIX statement* IF_SUFFIX ELSE statement* ELSE_SUFFIX
+    : IF expression CONDITION_SUFFIX scope* IF_SUFFIX
+    | IF expression CONDITION_SUFFIX scope* IF_SUFFIX ELSE condition_block
+    | IF expression CONDITION_SUFFIX scope* IF_SUFFIX ELSE condition_block ELSE statement* ELSE_SUFFIX
+    | IF expression CONDITION_SUFFIX scope* IF_SUFFIX ELSE statement* ELSE_SUFFIX
     ;
 
 // For loop
 for_block
-    : FOR LPAREN expression? SEMICOLON expression? RPAREN FOR_TERMINATOR LPAREN expression RPAREN statement* FOR_SUFFIX
+    : FOR LPAREN expression? SEMICOLON expression? RPAREN FOR_TERMINATOR LPAREN expression RPAREN scope* FOR_SUFFIX
     ;
 
 // While
 while_block
-    : WHILE expression CONDITION_SUFFIX statement* WHILE_SUFFIX
+    : WHILE expression CONDITION_SUFFIX scope* WHILE_SUFFIX
     ;
 
 /****************** Conditions Definitions ******************/

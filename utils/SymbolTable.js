@@ -55,6 +55,7 @@ module.exports = class SymbolTable {
 
         /* Pop it */
         let scope = this.scopes.pop();
+        return scope;
     }
 
     /**
@@ -92,6 +93,27 @@ module.exports = class SymbolTable {
         let record = this.findRecord(key);
         if (!record) {
             return false;
+        }
+
+        record.value = value;
+        return true;
+    }
+
+    /**
+     * Adds or Sets a symbol key and the coresponding value in the symbols table.
+     * A typical use would be to use it to register variables.
+     * @param {String} key The symbol key.
+     * @param {*} value The symbol value.
+     */
+    addOrSet(key, value) {
+        if (key.length < 1) {
+            throw new Error('The Symbols Table requires a valid string key (length >= 1).');
+        }
+
+        let record = this.findRecord(key);
+        if (!record) {
+            this.scopes.peek().set(key, new Record(key, value));
+            return true;
         }
 
         record.value = value;
@@ -151,7 +173,14 @@ module.exports = class SymbolTable {
      * @returns {boolean}
      */
     exists(key) {
-        return Array.from(this.scopes.peek().keys()).indexOf(key) > -1;
+        let elements = this.scopes.toArray();
+        for (let i = elements.length - 1; i >= 0; i--) {
+            if (elements[i].has(key)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     /**
@@ -165,7 +194,7 @@ module.exports = class SymbolTable {
         while (!scopes.isEmpty()) {
             let scope = scopes.pop();
 
-            builder += `\tScope { depth = ${i}, count = ${scope.size} } (\n`;
+            builder += `\tScope { depth = ${this.scopes.size() - i++}, count = ${scope.size} } (\n`;
             scope.forEach((v, k) => {
                 builder += `\t\t"${k}": "${v.value}"\n`;
             });

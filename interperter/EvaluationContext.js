@@ -7,10 +7,10 @@ module.exports = class EvaluationContext {
     /**
      * Initialize the Evaluation Context
      * @param {ParsingContext} parsingContext 
-     * @param {SymbolTable} symbolsTable 
+     * @param {USVisitor} visitor 
      */
-    constructor(parsingContext, symbolsTable) {
+    constructor(parsingContext, visitor) {
         this.parsingContext = parsingContext;
-        this.symbolsTable = symbolsTable;
+        this.visitor = visitor;
     }
 };

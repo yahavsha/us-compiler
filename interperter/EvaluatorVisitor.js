@@ -13,7 +13,6 @@ const EvaluationContext = require('./EvaluationContext');
 
 /* Helpers */
 const SymbolTable = require('../utils/SymbolTable');
-const Stack = require('../utils/Stack');
 
 /* Access to nodes */
 const { Node, NodeFactory, NodeType } = require('../nodes');
@@ -68,9 +67,10 @@ class EvaluationResult {
     6. https://github.com/justinmeza/lci 
 */
 module.exports = class EvaluatorVisitor extends USVisitor {
-    constructor(globals) {
+    constructor(options, globals) {
         super();
-        this.isMeanie = false;
+        this.options = options;
+        this.isMeanie = this.options.isMeanie;
         this.globals = globals;
     }
 
@@ -112,6 +112,34 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     }
 
     /**
+     * Executed when the global scope was triggered.
+     * @param {ParsingContext} ctx The parsing context.
+     * @description The invoking rule is:
+     * <code>
+            global_scope
+            : function_decl* scope
+            ;
+     * </code>
+     */
+    visitGlobal_scope(ctx) {
+        return this.visitChildren(ctx);
+    }
+
+    /**
+     * Executed when a scope is being evaluated.
+     * @param {ParsingContext} ctx The parsing context.
+     * @description The invoking rule is:
+     * <code>
+            scope
+            : statement+
+            ;
+     * </code>
+     */
+    visitScope(ctx) {
+        return this.visitChildren(ctx);
+    }
+
+    /**
      * Executed when the "is meanie" instruction was supplied.
      * @param {ParsingContext} ctx The parsing context.
      * @description The invoking rule is:
@@ -136,7 +164,6 @@ module.exports = class EvaluatorVisitor extends USVisitor {
             let child = ctx.getChild(i).accept(this);
             
             /* If this is a code block related statements, evaluate them now */
-            
             if (child instanceof Node && EVALUATE_NODES.indexOf(child.getType()) >= -1) {
                 child.eval();
             }
@@ -174,13 +201,16 @@ module.exports = class EvaluatorVisitor extends USVisitor {
 
         /* Is this a variable? */
         if (ctx.getSymbol().type == Parser.LABEL) {
-            /* Retrieve it from the symbols table */
-            let value = this.symTable.find(ctx.getText());
-            if (value === null) {
+            /* Does it exists in the symbol table? */
+            if (!this.symTable.exists(ctx.getText())) {
                 throw new VariableNotDefinedError(ctx, ctx);
             }
 
-            return value;
+            return NodeFactory({
+                ctx: this._createContext(ctx),
+                type: NodeType.VARIABLE,
+                args: [ctx.getText()]
+            });
         }
 
         debug("Could not resolve the terminal node as it's not a symobl.");
@@ -228,6 +258,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
 
         /* Do we have an else block? */
         if (ctx.children.length > 5
+            && ctx.getChild(6 + elseIndexDistance)
             && !this._isSymbol(ctx.getChild(6 + elseIndexDistance))) {
             /* Did we got nested else? */
             if (ctx.getChild(6 + elseIndexDistance).ruleIndex === Parser.RULE_statement) {
@@ -242,7 +273,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
                 ifFalse = ctx.getChild(6 + elseIndexDistance).accept(this);
             }
         }
-        
+
         return NodeFactory({
             ctx: evalContext,
             type: NodeType.IF_STATEMENT,
@@ -353,8 +384,10 @@ module.exports = class EvaluatorVisitor extends USVisitor {
             return ctx.getChild(0).accept(this);
         }
 
-        /* Gets the variable & the value */
+        /* Gets the variable */
         let variable = ctx.getChild(0);
+
+        /* Get the underlaying value */
         let value = ctx.getChild(2).accept(this);
         
         this._setVariable(ctx, variable, value);
@@ -546,6 +579,8 @@ module.exports = class EvaluatorVisitor extends USVisitor {
             return ctx.getChild(0).accept(this);
         }
 
+        console.log('applying unary ');
+
         /* Get the actual expression to which we apply the unary value.
         For example, "--a" then the expression is "a". Note that we can actually nested this thing,
         to get "--++a" (that's equal to a). */
@@ -672,7 +707,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      */
     _createContext(ctx) {
         return new EvaluationContext(
-            ctx, this.symTable
+            ctx, this
         );
     }
 
@@ -686,7 +721,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      */
     _setVariable(ctx, variableContext, value) {
         const variableName = variableContext.getText();
-
+        
         /* Did we got a value? */
         if (!value) {
             value = NodeFactory({
@@ -694,10 +729,16 @@ module.exports = class EvaluatorVisitor extends USVisitor {
                 type: NodeType.VARIABLE,
                 args: [variableName, ValueNode.NULL]
             });
+        } else {
+            /* Make sure that we're saving a ValueNode */
+            if (!(value instanceof ValueNode)) {
+                value = value.eval();
+            }
         }
 
         /* Add it to the table */
-        this.symTable.set(variableContext.getText(), value);
+        this.symTable.addOrSet(variableContext.getText(), value);
+        debug(`Assigning "${variableName}" to ${value}`);
     }
 
     /**
@@ -795,7 +836,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      * @return True if it's a symbol, false otherwise.
      */
     _isSymbol(ctx) {
-        return typeof(ctx.getSymbol) !== 'undefined';
+        return ctx && typeof(ctx.getSymbol) !== 'undefined';
     }
 
 

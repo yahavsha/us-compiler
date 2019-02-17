@@ -17,10 +17,9 @@ const antlr4 = require('antlr4');
 const Lexer = require("../ast/usLexer");
 const Parser = require("../ast/usParser");
 
- /* Nodes */
- const {
-    createUSValue
-} = require('../utils/TypesResolver');
+/* Helpers */
+const InterperterOptions = require('./InterperterOptions');
+const { createUSValue } = require('../utils/TypesResolver');
 
 /* Error Handler */
 const ExceptionsBasedErrorListener = require('./ExceptionsBasedErrorListener');
@@ -44,9 +43,17 @@ module.exports = class Interperter {
         this.errorListeners = [new ExceptionsBasedErrorListener()];
         this.errorsCount = 0;
         this.globalVariables = {};
+        this.options = new InterperterOptions();
 
         this.setGlobalVariable('__VERSION__', '0.1');
-
+    }
+    
+    /**
+     * Sets the interperation options.
+     * @param {InterperterOptions} options 
+     */
+    setOptions(options) {
+        this.options = options;
     }
 
     setGlobalVariable(name, value) {
@@ -94,7 +101,7 @@ module.exports = class Interperter {
 
         /* Evaluate the code by using our evaluation visitors */
         const EvaluatorVisitor = require('./EvaluatorVisitor');
-        const evaluator = new EvaluatorVisitor(this.globalVariables);
+        const evaluator = new EvaluatorVisitor(this.options, this.globalVariables);
 
         /* Create the AST Evaluation Node */
         const evaluationResult = evaluator.start(ast);

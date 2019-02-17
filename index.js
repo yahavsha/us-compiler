@@ -6,17 +6,21 @@ let input = `
 hey
     is meanie
     
+    chocolate1 is 1k
+    anw yupyup?
+        chocolate1 is chocolate1 * 3
+        chocolate1 is chocolate1 * 2
+    yay!
+
     sum is 1
     i is 1
 
     huh i small^ 5?
         sum is sum * i
+        i is i + 1
     stop!
 
     BARRIER! 
-	huh {condition}?
-        shh shh... Code
-    stop!
 
     sup chocolate1
     shh shh...chocolate1 is 1k same 2k also 2k diff 3k also 3k same 2k

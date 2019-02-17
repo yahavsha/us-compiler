@@ -60,8 +60,9 @@ module.exports = class ArithmeticOperationNode extends Node {
         if (!(lparam instanceof ValueNode)) {
             lparam = lparam.eval();
         }
+        
         if (!(rparam instanceof ValueNode)) {
-            rparam = lparam.eval();
+            rparam = rparam.eval();
         }
 
         /* Now we can forward them to the evaluation function */

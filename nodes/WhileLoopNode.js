@@ -39,16 +39,43 @@ module.exports = class WhileLoopNode extends Node {
      * Evaluates the node and get a ValueNode from it. Only ValueNode actually returns the ES6 value.
      */
     eval() {
-        /* Evaluate the condition */
-        let result = this.condition;
-        if (!(result instanceof ValueNode)) {
-            result = result.eval(); // If we write if(true) we'll have  just a ValueNode. we also might have if (1) etc. For other cases, we'll evaluate the node
+        /* Surround by a try-catch for infinite loop handling */
+        try {
+            /* Setup the initial check */
+            let result = this.condition;
+            if (!(result instanceof ValueNode)) {
+                result = result.eval(); // If we write if(true) we'll have  just a ValueNode. we also might have if (1) etc. For other cases, we'll evaluate the node
+            }
+
+            let iter = 1;
+            while (result.eval() === true && ++iter < this.context.visitor.options.maxIterations) {
+                /* Evaluate the loop iteration */
+                this.body.eval();
+                
+                /* Evaluate the condition again.
+                We need to do it every time as the ValueNode will have the condition value for
+                a specific iteration, and we want to check the updated condition. */
+                result = this.condition;
+                if (!(result instanceof ValueNode)) {
+                    result = result.eval(); // If we write if(true) we'll have  just a ValueNode. we also might have if (1) etc. For other cases, we'll evaluate the node
+                }
+            }
+
+            /* Did we stopped because we exceeded the max iterations? */
+            if (this.context.visitor.options.maxIterations < iter) {
+                const { StackOverflowError } = require('../interperter/CompilationErrors');
+                throw new StackOverflowError(this.context.parsingContext);
+            }
+        } catch (e) {
+            /* Is this an infinite loop? */
+            if (e instanceof RangeError) {
+                const { StackOverflowError } = require('../interperter/CompilationErrors');
+                throw new StackOverflowError(this.context.parsingContext);
+            }
+
+            throw e; // Forward
         }
-        
-        if (result.eval() === true) {
-            return this.body.eval();
-        }
-        
+
         return ValueNode.NULL;
     }
 };

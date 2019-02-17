@@ -198,10 +198,18 @@ class SyntaxError extends CompilationError {
      * Get the
      */
     getErrorLine() {
+        /* Get the parser. We might not have it in this context, so we should go up in the tree */
+        let ptr = this.ctx;
+        let parser = undefined;
+        while (ptr && !parser) {
+            parser = ptr.parser;
+            ptr = ptr.parentCtx;
+        }
+
         /* Grab the actual code input (the entire code contents) */
-        const tokens = new antlr4.CommonTokenStream(this.ctx.parser.getInputStream());
+        const tokens = new antlr4.CommonTokenStream(parser.getInputStream());
         const input = tokens.tokenSource.tokenSource.inputStream.toString();
-    
+        
         /* Split into lines */
         const lines = input.split(/\r?\n/);
 
@@ -280,6 +288,13 @@ class FormatError extends SemanticError {
     }
 }
 
+class StackOverflowError extends SemanticError {
+    constructor(ctx) {
+        super('Maximum call stack size exceeded', ctx);
+    }
+}
+
+
 /*****************************************************************************
  * Export 'hem all
  * https://www.youtube.com/watch?v=wrCUQuJsDYI ᕙ[ ˵ ͡’ ω ͡’ ˵ ]ᕗ
@@ -293,5 +308,6 @@ class FormatError extends SemanticError {
      ArithmeticOperationError,
      DivisionByZeroError,
      InvalidCastError,
-     FormatError
+     FormatError,
+     StackOverflowError
  };
