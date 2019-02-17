@@ -1,4 +1,6 @@
 # Us Programming Language
+[![Build Status](https://travis-ci.org/yahavsha/us-compiler.svg?branch=master)](https://travis-ci.org/yahavsha/us-compiler)
+
 ## Words of Opening, End Goal & Project Dedication
 This is an implementation of an interperter (similar to compiler, but interperts the code and execute it instead of compiles it into machine code) in plain ES6 (JavaScript) code.
 

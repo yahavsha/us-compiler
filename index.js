@@ -6,6 +6,18 @@ let input = `
 hey
     is meanie
     
+    sum is 1
+    i is 1
+
+    huh i small^ 5?
+        sum is sum * i
+    stop!
+
+    BARRIER! 
+	huh {condition}?
+        shh shh... Code
+    stop!
+
     sup chocolate1
     shh shh...chocolate1 is 1k same 2k also 2k diff 3k also 3k same 2k
     chocolate1 is 3k
@@ -20,7 +32,6 @@ hey
         chocolate is chocolate * 8
     ugh!
 
-    BARRIER!
     sup castedChocolate
     woah castedChocolate is (cosplay chocolate1 as Words)
 

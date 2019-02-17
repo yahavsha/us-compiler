@@ -40,9 +40,16 @@ const {
  * Define our strong evaluator! ᕙ(＠°▽°＠)ᕗ
  *****************************************************************************/
 
+ /**
+  * Defines a class that stores the evaluation results and allow to access some of its values.
+  */
 class EvaluationResult {
-    constructor(symTable) {
-        this.symTable = symTable;
+    constructor(options = {
+        symTable,
+        isMeanie
+    } = {}) {
+        this.symTable = options.symTable;
+        this.isMeanie = options.isMeanie;
     }
 
     getGlobalVariable(key) {
@@ -81,7 +88,10 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         console.log("==============================");
         console.log(this.symTable.toString());
 
-        return new EvaluationResult(this.symTable);
+        return new EvaluationResult({
+            isMeanie: this.isMeanie,
+            symTable: this.symTable
+        });
     }
 
     /*********************** Parsing Rules ***********************/
@@ -117,7 +127,8 @@ module.exports = class EvaluatorVisitor extends USVisitor {
 
     visitStatement(ctx) {
         const EVALUATE_NODES = [
-            NodeType.IF_STATEMENT
+            NodeType.IF_STATEMENT,
+            NodeType.WHILE_LOOP
         ];
 
         /* Visit each child */
@@ -166,7 +177,6 @@ module.exports = class EvaluatorVisitor extends USVisitor {
             /* Retrieve it from the symbols table */
             let value = this.symTable.find(ctx.getText());
             if (value === null) {
-                console.log('no variable: ' + ctx.getText());
                 throw new VariableNotDefinedError(ctx, ctx);
             }
 
@@ -217,7 +227,8 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         }
 
         /* Do we have an else block? */
-        if (ctx.children.length > 5) {
+        if (ctx.children.length > 5
+            && !this._isSymbol(ctx.getChild(6 + elseIndexDistance))) {
             /* Did we got nested else? */
             if (ctx.getChild(6 + elseIndexDistance).ruleIndex === Parser.RULE_statement) {
                 /* This is a standard "else" without "if else" */
@@ -239,6 +250,41 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         });
     }
 
+    /**
+     * Executed when a condition statement is being used.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        while_block
+            : WHILE expression CONDITION_SUFFIX statement* WHILE_SUFFIX
+            ;
+     * </code>
+     */
+    visitWhile_block(ctx) {
+        /* Parse the condition */
+        const expression = ctx.getChild(1).accept(this);
+        const evalContext = this._createContext(ctx);
+
+        /* Do we have a loop body? */
+        let body = undefined;
+        if (!this._isSymbol(ctx.getChild(3))) {
+            /* Parse the body as a new scope */
+            body = NodeFactory({
+                ctx: evalContext,
+                type: NodeType.SCOPE,
+                args: [ctx.getChild(3), this]
+            });
+        }
+
+        /* Finalize */
+        return NodeFactory({
+            ctx: evalContext,
+            type: NodeType.WHILE_LOOP,
+            args: [expression, body]
+        });
+    }
+    
     /**
      * Executed when an expression is being performed.
      * @param {ParsingContext} ctx The parsing context.

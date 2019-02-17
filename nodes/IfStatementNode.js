@@ -48,11 +48,13 @@ module.exports = class IfStatementNode extends Node {
         }
         
         if (result.eval() === true) {
-            this.ifTrueCode.eval();
+            return this.ifTrueCode.eval();
         } else {
             if (typeof(this.ifFalseCode) !== 'undefined') {
-                this.ifFalseCode.eval();
+                return this.ifFalseCode.eval();
             }
         }
+        
+        return ValueNode.NULL;
     }
 };

@@ -28,6 +28,11 @@ function formatMessage(message, line, column) {
  *****************************************************************************/
 
 class CompilationError extends Error {
+    /**
+     * Constructs a new compilation error.
+     * @param {String} message The error message.
+     * @param {String} code The error code.
+     */
     constructor(message, code) {
         super(message);
 
@@ -156,7 +161,9 @@ class SyntaxError extends CompilationError {
 
         /* Save the new data */
         this.ctx = ctx;
-        this.lineNumber = ctx.start.line;
+        
+        let detailedContext = this._isSymbol(ctx) ? ctx.symbol : ctx; // If we have a symbol, we should use it to get the line & column.
+        this.lineNumber = typeof(detailedContext.line) == 'number' ? detailedContext.line : detailedContext.start.line;
 
         /* If we haven't been told which part in the code to mark, we'll guess it's the ctx current symbol.
         For example, if the exception is been thrown from meanie_instruction rule, then
@@ -164,9 +171,9 @@ class SyntaxError extends CompilationError {
             ^^^^^^^^^
         will be produced */
         if (typeof(column) === 'undefined') {
-            this.column = ctx.start.column;
-            this.start = ctx.start.start;
-            this.stop = ctx.stop.stop;
+            this.column = typeof(detailedContext.column) == 'number' ? detailedContext.column : detailedContext.start.column;
+            this.start = typeof(detailedContext.start) == 'number' ? detailedContext.start : detailedContext.start.start;
+            this.stop = typeof(detailedContext.stop) == 'number' ? detailedContext.stop : detailedContext.stop.stop;
         } else if (typeof(column) === 'object') {
             while (column && !column.symbol) { // This will allow to send a general parsing context and will find the terminal node of the variable.
                 column = column.getChild(0);
@@ -187,6 +194,9 @@ class SyntaxError extends CompilationError {
         this.message = formatMessage(message, this.lineNumber, this.column);
     }
 
+    /**
+     * Get the
+     */
     getErrorLine() {
         /* Grab the actual code input (the entire code contents) */
         const tokens = new antlr4.CommonTokenStream(this.ctx.parser.getInputStream());
@@ -216,6 +226,15 @@ class SyntaxError extends CompilationError {
 
         /* Done */
         return errorLine + "\n" + underline;
+    }
+
+    /**
+     * Determines if the given parsing context node is a symobl node (a.k.a., label, variable, parentesis, plus, minus etc.).
+     * @param {ParsingContext} ctx The parsing context.
+     * @return True if it's a symbol, false otherwise.
+     */
+    _isSymbol(ctx) {
+        return typeof(ctx.getSymbol) !== 'undefined';
     }
  };
 

@@ -29,14 +29,15 @@
 
 
 const { Node, NodeType } = require('./Node');
-const ValueNode = require('./ValueNode');
-const VariableNode = require('./VariableNode');
-const ArithmeticOperationNode = require('./ArithmeticOperationNode');
-const CastingNode = require('./CastingNode');
-const ConditionalExpressionNode = require('./ConditionalExpressionNode');
-const ConditionNode = require('./ConditionNode');
-const IfStatementNode = require('./IfStatementNode');
-const ScopeNode = require('./ScopeNode');
+const ValueNode                             = require('./ValueNode');
+const VariableNode                          = require('./VariableNode');
+const ArithmeticOperationNode               = require('./ArithmeticOperationNode');
+const CastingNode                           = require('./CastingNode');
+const ConditionalExpressionNode             = require('./ConditionalExpressionNode');
+const ConditionNode                         = require('./ConditionNode');
+const IfStatementNode                       = require('./IfStatementNode');
+const ScopeNode                             = require('./ScopeNode');
+const WhileLoopNode                         = require('./WhileLoopNode');
 
 /**
  * Instantiate a new {@see Node} from the given node type and arguments.
@@ -81,6 +82,8 @@ function NodeFactory(options = {
             return new ScopeNode(... options.args);
         case NodeType.IF_STATEMENT:
             return new IfStatementNode(... options.args);
+        case NodeType.WHILE_LOOP:
+            return new WhileLoopNode(... options.args);
         default:
             throw new Error("NodeFactory: Unknown node type requested: " + options.type);
     }
@@ -97,5 +100,6 @@ module.exports = {
     ConditionalExpressionNode,
     ConditionNode,
     ScopeNode,
-    IfStatementNode
+    IfStatementNode,
+    WhileLoopNode
 };

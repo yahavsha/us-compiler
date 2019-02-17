@@ -38,6 +38,12 @@ module.exports = class ScopeNode extends Node {
      * Evaluates the node and get a ValueNode from it. Only ValueNode actually returns the ES6 value.
      */
     eval() {
-        return this.statements.accept(this.visitor);
+        this.context.symbolsTable.enterScope();
+
+        let result = this.statements.accept(this.visitor);
+
+        this.context.symbolsTable.exitScope();
+
+        return result;
     }
 };

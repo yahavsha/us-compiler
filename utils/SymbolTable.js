@@ -24,7 +24,7 @@ module.exports = class SymbolTable {
      * Creates a new scope and enters into it.
      */
     enterScope() {
-        this.scopes.push(new Map());
+        this.scopes.push(new Map(this.scopes.peek()));
     }
 
     /**

@@ -58,6 +58,12 @@ module.exports = class ConditionalExpressionNode extends Node {
             case Parser.COMPARE_GREATER:
                 result = lparam.eval() > rparam.eval();
                 break;
+            case Parser.COMPARE_SMALLER_EQUAL:
+                result = lparam.eval() <= rparam.eval();
+                break;
+            case Parser.COMPARE_GREATER_EQUAL:
+                result = lparam.eval() >= rparam.eval();
+                break;
             default:
                 throw new Error('Unknown comparator operator detected.');
         }

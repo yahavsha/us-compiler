@@ -7,7 +7,15 @@ module.exports.NodeType = {
     CASTING:                5,
     CONDITION_EXPR:         6,
     CONDITION:              7,
-    IF_STATEMENT:           8
+    IF_STATEMENT:           8,
+    FOR_LOOP:               9,
+    WHILE_LOOP:             10,
+    NATIVE_FUNCTION:        11,
+    USER_FUNCTION:          12,
+    FUNCTION_ARGS_LIST:     13,
+    FUNCTION_ARG:           14,
+    RETURN:                 15,
+    FUNCTION_CALL:          16
 };
 
 class Node {
