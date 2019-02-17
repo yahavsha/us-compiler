@@ -85,6 +85,12 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     }
 
     /*********************** Parsing Rules ***********************/
+    
+
+    /**
+     * Executed when the program is being evaluated.
+     * @param {ParsingContext} ctx The parsing context.
+     */
     visitProgram(ctx) {
         /* Push the entire global variables so they'll be available from within our script */
         for (let chocolate in this.globals) { // Why chocolate? cause it's tasty, duh!
@@ -97,7 +103,13 @@ module.exports = class EvaluatorVisitor extends USVisitor {
 
     /**
      * Executed when the "is meanie" instruction was supplied.
-     * @param {*} ctx 
+     * @param {ParsingContext} ctx The parsing context.
+     * @description The invoking rule is:
+     * <code>
+        meanie_instruction:
+            ASSIGNMENT MEANIE_PROGRAM
+            ;
+     * </code>
      */
     visitMeanie_instruction(ctx) {
         this.isMeanie = true;
@@ -106,7 +118,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     /**
      * Visit a terminal node. We'll get here in case we're dealing with plain primitive value such as
      * number, string and variable. We'll use this method to retrieve the variable value.
-     * @param {*} ctx 
+     * @param {ParsingContext} ctx The parsing context.
      * @return {Node} A node with the coresponding value, or undefined if we should just throw this into the trash can!
      */
     visitTerminal(ctx) {
@@ -142,311 +154,365 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         return undefined;
     }
 
-    visitDeclaration(ctx) {
-        /**
-         * A declaration rule can have two forms:
-         * 1) VAR_DECL LABEL
-         * 2) VAR_DECL_ASSGN assignment
-         * We should check which one was applied here.
-         */
-
-        /* Is this a decleration or decleration + assignment? */
-        if (ctx.getChild(0).getSymbol().type == Parser.VAR_DECL) {
-            /* This is a plain declaration only */
-            let variable = ctx.getChild(1);
-            const variableName = variable.getText();
-
-            /* Is this variable declared before? */
-            if (this.symTable.exists(variableName)) {
-                throw new VariableAlreadyDefinedError(ctx, variable);
-            }
-
-            /* Add it to the table */
-            this.symTable.set(variable.getText(), NodeFactory({
-                ctx: this._createContext(ctx),
-                type: NodeType.VARIABLE,
-                args: [variableName, ValueNode.NULL]
-            }));
-        } else {
-            console.log("decl + assign");
-        }
-
-        return this.visitChildren(ctx);
-    }
-
-    visitAssignment(ctx) {
-        /* Get the variable itself */
-        let variableLabel = ctx.getChild(0);
-
-        /* Did we defined it? we HAVE to if we're being mean! */
-        if (this.isMeanie) {
-            if (!this.symTable.exists(variableLabel.getText())) {
-                throw new VariableNotDefinedError(ctx, variableLabel);
-            }
-        }
-
-        /* Parse the value */
-        let value = ctx.getChild(2).accept(this);
-        
-        /* Update the symbol table */
-        this.symTable.set(variableLabel.getText(), value);
-
-        // console.log("Value: (text: \""+ ctx.getChild(2).getText() + "\"):");
-        // console.log(value.toString());
-        // console.log("Eval:");
-        // console.log(value.eval().toString());
-        return undefined;
-        console.log(`assigning ${variableLabel} = ${value}`);
-        return this.visitChildren(ctx);
-    }
-
+    /**
+     * Executed when an expression is being performed.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        expression
+            :   assignment_expression
+            ;
+     * </code>
+     */
     visitExpression(ctx) {
-        /* An expression looks like that:
-        expression :
-                multiplying_expression ((PLUS | MINUS) multiplying_expression)*
-                | expression LOGICAL_OR expression
-                | expression LOGICAL_AND expression
-                | expression COMPARE_EQUAL expression
-                | expression COMPARE_NOT_EQUAL expression
-                | expression COMPARE_GREATER expression
-                | expression COMPARE_SMALLER expression
-        
-        A multiplying expression is an expression that uses the multiply and divide operators. Why do we need these?
-        Because we want to respect the order of precedence.
-        The rest of the expressions are just nested expressions with comparison operators.
-        We need to determine which type of expression we got. If we got a comparison operator, we need to evaluate both
-        sides of the edxpression and then return the boolean value, otherwise we can just continue with arithmetic evaluation.
+        return ctx.getChild(0).accept(this);
+    }
 
-        Thus:
-        1) If we have one child - it's a nested expression or it's childs (like label).
-        2) If we have more: We need to check if it's an arithmetic op, comparator op or logical op and act accordingly.
-        */
+    /**
+     * Executed when a declaration statement was supplied.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+            declaration
+            : VAR_DECL LABEL
+            | VAR_DECL_ASSGN? assignment_expression
+            ;
+     * </code>
+     */
+    visitDeclaration(ctx) {
+        if (this._isSymbol(ctx.getChild(0))) {
+            /* Is this a plain variable decl or should we parse the assignment_expression? */
+            if (ctx.getChild(0).getSymbol().type == Parser.VAR_DECL) {
+                /* Plain variable declaration */
+                return this._setVariable(ctx, ctx.getChild(1));
+            } else {
+                /* This is assignment_expression */
+                return ctx.getChild(1).accept(this);
+            }
+        }
 
-        /* If the length === 1, then this is just a simple expression we can easily resolve */
+        /* We don't have a symbol as the 0'th child, that means we should just
+        forward to the next rule, which's assignment_expression */
+        return ctx.getChild(0).accept(this);
+    }
+
+    /**
+     * Executed when an assignement is being performed.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        assignment_expression
+            :   conditional_expression
+            |   unary_expression ASSIGNMENT expression
+            ;
+     * </code>
+     */
+    visitAssignment_expression(ctx) {
+        /* Should we just forward the call or actually performs an assignemnt here? */
         if (ctx.children.length === 1) {
+            /* That's a conditional_expression, so just forward it */
             return ctx.getChild(0).accept(this);
         }
 
-        /* If the length === 3, it can be everything from arithmetic operation to a simple condition */
-        if (ctx.children.length === 3) {
-            let op = ctx.getChild(1).accept(this); // Fetch the operator
-            console.log('op: ' + op);
-
-            /* If that's a type, handle it accorndlgly */
-            if (isOPSymbol(op) || isTypeSymbol(op)) {
-                return this._handleArithmeticExpression(ctx);
-            }
-        }
-
-        /* That's a condition */
-        return this._handleConditionExpression(ctx);
-
-        //     if (isComparatorSymbol(op)) {
-        //         let lparam = ctx.getChild(0).accept(this);
-        //         let rparam = ctx.getChild(2).accept(this);
-
-        //         return NodeFactory({
-        //             ctx: this._createContext(ctx),
-        //             type: NodeType.CONDITION_EXPR,
-        //             args: [lparam, op, rparam]
-        //         });
-        //     }
-        // }
-        // return this._handleArithmeticExpression(ctx);
-    }
-
-    visitMultiplying_expression(ctx) {
-        return this._handleArithmeticExpression(ctx);
-    }
-
-    visitPow_expression(ctx) {
-        return this._handleArithmeticExpression(ctx);
-    }
-
-    visitSigned_atom(ctx) {
-        /* A signed is an atom that MIGHT have a "PLUS" or "MINUS".
-         * Thus, if the child[0] is a symbol, it's plus or minus.
-         * The atom parsing should be moved fo
-         * rward. */
-        if (this._isSymbol(ctx.getChild(0))) {
-            /* If the sign is a plus, we don't need to do anything. Why? because
-                plus * plus = plus
-                minus * plus = minus
-                plus * minus = minus
-                minus * minus = plus.
-            */
-            if (ctx.getChild(0).getSymbol().type == Parser.MINUS) {
-                let atomValue = ctx.getChild(1).accept(this);
-                return NodeFactory({
-                        ctx: this._createContext(ctx),
-                        type: NodeType.ARITHMETIC_OPERATION,
-                        args: [
-                            atomValue,
-                            Parser.MULTIPLY,
-                            NodeFactory({
-                                ctx: this._createContext(ctx),
-                                type: NodeType.VALUE,
-                                args: [Parser.NUMBER, '-1']
-                            })
-                        ]
-                    });
-            }
-        }
-        
-        return ctx.getChild(0).accept(this);
-    }
-
-    visitAtom(ctx) {
-        /*
-         * Atom: LABEL | NUMBER | STRING | NULL | TRUE | FALSE
-         * | LPAREN expression RPAREN | casting | function_call
-         * 
-         * We see that ATOM contains a:
-         * 1) Terminal node (number, string, a label (a.k.a., variable)) etc.
-         * 2) A forward call to an expression, but with parentesis.
-         * 3) Casting.
-         * 4) Function Call (and what if you want to do "(foo())"? then it's LPAREN expr PAREN which'll return here for the function_call).
-         * 
-         * We can conclude that we only care about getChild(0), except in (2) in which we need getChild(1).
-         * Then we can forward the call via visit(ctx) to visitTerminal, visitExpression etc. Idk which one will be executed.
-         * The point is to find the right child to parse, so we don't need to call visitChildren
-         * which iterates on all of them and returns an array. I don't like arrays! it looks bad to do, like, visitChildren(ctx)[0][0][0]...
-          */
-         if (this._isSymbol(ctx.getChild(0)) && ctx.getChild(0).getSymbol().type == Parser.LPAREN) {
-                // This is the "LPAREN expression RPAREN", so parse child(1)
-                return this.visit(ctx.getChild(1));
-         }
-
-         return this.visit(ctx.getChild(0));
-    }
-
-    visitCasting(ctx) {
-        /** For casting, the rule works like:
-         * VAR_CAST LABEL VAR_CAST_TO type_specifiers
-         * Thus, we need the 1'st and 3'rd childs.
-         */
-        
-        let variable = ctx.getChild(1).accept(this);
-        let typeSymobl = ctx.getChild(3).accept(this);
-
-        /* Does the variable already exists? */
-        if (!this.symTable.exists(ctx.getChild(1).getText())) {
-            throw new VariableNotDefinedError(ctx, variable);
-        }
-
-        let n = NodeFactory({
-            ctx: this._createContext(ctx),
-            type: NodeType.CASTING,
-            args: [variable, typeSymobl]
-        });
-
-        console.log(n.toString());
-        console.log(n.eval().toString());
+        /* Gets the variable & the value */
+        // let variable = ctx.getChild(0).accept(this);
+        let value = ctx.getChild(2).accept(this);
+        console.log(`Value: ${value}`);
         process.exit(0);
     }
 
-    visitType_specifiers(ctx) {
-        /* The type_specifiers rule just contains a bunch of type symobls like Words or Numbers.
-        As we don't have, at least right now, complex types (classes), we don't need to do much here 
-        Only thing to do here is to return the termianl node. */
-        return ctx.getChild(0).accept(this);
-    }
-
-    visitCondition_block(ctx) {
-        /**
-         * This is an if-else condition.
-         * The rule structure is:
-         * 1) IF conditional_expression CONDITION_SUFFIX statement* IF_SUFFIX
-         * 2) IF conditional_expression CONDITION_SUFFIX statement* IF_SUFFIX (ELSE condition_block)? ELSE statement* ELSE_SUFFIX
-         * 
-         * Thus our childs are:
-         * - #1: The condition expression itself.
-         * - #3: The if-true block.
-         * - 
-         */
-        
-        /* Parse the condition expression */
-        let conditionsNode = ctx.getChild(1).accept(this);
-        console.log('got expression');
-        console.log(conditionsNode.toString());
-        console.log(conditionsNode.eval().toString());
-        process.exit(0);
-    }
-
+    /**
+     * Executed when a condition expression is being performed.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        conditional_expression
+            :   logical_or_expression
+            ;
+     * </code>
+     */
     visitConditional_expression(ctx) {
-        /**
-         * Each condition might have multiple rules, seperated by logical operations.
-         * Thus, to keep the and and or rules in order, we seperated them into 2 rules.
-         * This rule is:
-         *  and_chained_conditional_expression (LOGICAL_AND and_chained_conditional_expression)*
-         * 
-         * Thus:
-         * 1) If we only have a simple expression, we'll have only one child.
-         * 2) If we'll have multiple expression, then
-         *      - Even indexes (0, 2, 4) will have the condition itself
-         *      - Odd indexes will have the logical operator.
-         */
+        return ctx.getChild(0).accept(this);
+    }
 
+    /**
+     * Executed when a "logical or" expression is being performed.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        logical_or_expression
+            :   logical_and_expression
+            |   logical_or_expression LOGICAL_OR logical_or_expression
+            ;
+     * </code>
+     */
+    visitLogical_or_expression(ctx) {
+        return ctx.getChild(0).accept(this);
+    }
+
+    /**
+     * Executed when a "logical and" expression is being performed.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        logical_and_expression
+            :   equality_expression
+            |   logical_and_expression LOGICAL_AND logical_and_expression
+            ;
+     * </code>
+     */
+    visitLogical_and_expression(ctx) {
+        return ctx.getChild(0).accept(this);
+    }
+
+    /**
+     * Executed when an "equal" operator expression is being performed.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        equality_expression
+            :   relational_expression
+            |   equality_expression COMPARE_EQUAL equality_expression
+            |   equality_expression COMPARE_NOT_EQUAL equality_expression
+            ;
+     * </code>
+     */
+    visitEquality_expression(ctx) {
+        return ctx.getChild(0).accept(this);
+    }
+
+    /**
+     * Executed when a relation operator expression is being performed.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        relational_expression
+            :   additive_expression
+            |   relational_expression '<' relational_expression
+            |   relational_expression '>' relational_expression
+            |   relational_expression '<=' relational_expression
+            |   relational_expression '>=' relational_expression
+            ;
+     * </code>
+     */
+    visitRelational_expression(ctx) {
+        return ctx.getChild(0).accept(this);
+    }
+
+    /**
+     * Executed when an additive operator has been applied in an expression.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        additive_expression
+            :   multiplicative_expression
+            |   additive_expression PLUS additive_expression
+            |   additive_expression MINUS additive_expression
+            ;
+     * </code>
+     */
+    visitAdditive_expression(ctx) {
+        return this._handleArithmeticExpression(ctx);
+    }
+
+    /**
+     * Executed when a multipication (or modulo) operator has been applied in an expression.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        multiplicative_expression
+            :   power_expression
+            |   multiplicative_expression MULTIPLY multiplicative_expression
+            |   multiplicative_expression DIVIDE multiplicative_expression
+            |   multiplicative_expression MOD multiplicative_expression
+            ;
+     * </code>
+     */
+    visitMultiplicative_expression(ctx) {
+        return this._handleArithmeticExpression(ctx);
+    }
+
+    /**
+     * Executed when a power operator has been applied in an expression.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        power_expression
+            : cast_expression
+            | power_expression POWER power_expression
+            ;
+     * </code>
+     */
+    visitPower_expression(ctx) {
+        return this._handleArithmeticExpression(ctx);
+    }
+
+    /**
+     * Executed when a cast pattern has been applied in an expression.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        power_expression
+            : cast_expression
+            | power_expression POWER power_expression
+            ;
+     * </code>
+     */
+    visitCast_expression(ctx) {
+        return ctx.getChild(0).accept(this);
+    }
+
+    /**
+     * Executed when a cast pattern has been applied in an expression.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+            unary_expression
+            :   postfix_expression
+            |   PLUS unary_expression
+            |   MINUS unary_expression
+            |   UNARY_PLUS unary_expression
+            |   UNARY_MINUS unary_expression
+            ;
+    * </code>
+    */
+    visitUnary_expression(ctx) {
+        /* An unary expression MIGHT have a prefix operator or sign.
+        If it doesn't we should just move forward (to postfix). Otherwise, we need to aply it */
         if (ctx.children.length === 1) {
-            /* This is a simple condition */
-            let expr = ctx.getChild(0).accept(this);
+            // Forward
+            return ctx.getChild(0).accept(this);
+        }
 
+        /* Get the actual expression to which we apply the unary value.
+        For example, "--a" then the expression is "a". Note that we can actually nested this thing,
+        to get "--++a" (that's equal to a). */
+        let expr = ctx.getChild(1).accept(this);
+
+        /* Apply the unary operator */
+        const unaryOp = ctx.getChild(0).accept(this);
+
+        if (unaryOp === Parser.MINUS) {
+            /* To change the sign, we'll multiply by -1 */
             return NodeFactory({
                 ctx: this._createContext(ctx),
-                type: NodeType.CONDITION,
-                args: [expr]
+                type: NodeType.ARITHMETIC_OPERATION,
+                args: [
+                    expr,
+                    Parser.MULTIPLY,
+                    NodeFactory({
+                        ctx: this._createContext(ctx),
+                        type: NodeType.VALUE,
+                        args: [Parser.NUMBER, '-1']
+                    })
+                ]
             });
+        }
+
+        /* the -(value) was a unique operator casue it require a multiplication. The rest require an addition
+        operation so we can shorten the code */
+        let addedValue = 0;
+        switch (unaryOp) {
+            case Parser.PLUS:
+                /* If the sign is a plus, we don't need to do anything. Why? because
+                    plus * plus = plus
+                    minus * plus = minus
+                    plus * minus = minus
+                    minus * minus = plus.
+                */
+                return expr;
+            case Parser.UNARY_PLUS:
+                addedValue = 1;
+                break;
+            case Parser.UNARY_MINUS:
+                addedValue = -1;
+                break;
+            default:
+                throw new Error('Could not resolve the requested unary operator.');
         }
 
         
-
-        /* Iterate over the nested conditions and build them.
-            Remember that even indexes has the conditions and odd indexes has the 
-            logical operatos. In addition, we'll always have odd length of childs
-            as we have two conditions + one logical operator.
-            For example:
-            if (expr1 && expr2 && expr3)
-            There're 3 expressions + 2 logical operators = 5 childrens.
-            Lastly, note that we go in reverse order to build everything, as we need to respect the order of precendence
-            in the evaluation process.
-            */
-        let condition = NodeFactory({
+        return NodeFactory({
             ctx: this._createContext(ctx),
-            type: NodeType.CONDITION,
-            args: [ctx.getChild(ctx.children.length - 1).accept(this)]
+            type: NodeType.ARITHMETIC_OPERATION,
+            args: [
+                expr,
+                Parser.PLUS,
+                NodeFactory({
+                    ctx: this._createContext(ctx),
+                    type: NodeType.VALUE,
+                    args: [Parser.NUMBER, addedValue]
+                })
+            ]
         });
-
-        for (let i = ctx.children.length - 2; i >= 0; i -= 2) { // length - 2 instead of length - 1 as we already took the last expr.
-            /* Get the data */
-            let op = ctx.getChild(i).accept(this);
-            let expr = ctx.getChild(i - 1).accept(this);
-
-            /* Chain the condition */
-            condition = NodeFactory({
-                ctx: this._createContext(ctx),
-                type: NodeType.CONDITION,
-                args: [expr, op, condition]
-            });
-        }
-        console.log("condition:");
-        console.log(condition.toString());
-        process.exit(0);
     }
 
-    visitAnd_chained_conditional_expression(ctx) {
-        /**
-         * This is an "and condition". It might have multiple or rules and a "not" logical unary operator.
-         * The rule is:
-         *  LOGICAL_NOT? expression (LOGICAL_OR LOGICAL_NOT? expression)*
-         * 
-         * Thus our childs depend if we got a LOGICAL_NOT at the start or not.
-         */
+    /**
+     * Executed when a cast pattern has been applied in an expression.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        postfix_expression
+            :   primary_expression
+            |   postfix_expression UNARY_PLUS
+            |   postfix_expression UNARY_MINUS
+            ;
+    * </code>
+    */
+    visitPostfix_expression(ctx) {
+        return ctx.getChild(0).accept(this);
+    }
 
-        if (this._isSymbol(ctx.getChild(0))) {
-            // We got a logical not at the first of the expression.
-        } else {
-            return ctx.getChild(0).accept(this);
+    /**
+     * Executed when a cast pattern has been applied in an expression.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        primary_expression
+            : LABEL
+            | NUMBER
+            | STRING
+            | NULL
+            | TRUE
+            | FALSE
+            | LPAREN expression RPAREN
+            | function_call
+    * </code>
+    */
+   visitPrimary_expression(ctx) {
+    /*
+        * We'll get here only an a case of:
+        * 1) Terminal node (number, string, a label (a.k.a., variable)) etc.
+        * 2) A forward call to an expression, but with parentesis.
+        * 4) Function Call (and what if you want to do "(foo())"? then it's LPAREN expr PAREN which'll return here for the function_call).
+        * 
+        * We can conclude that we only care about getChild(0), except in (2) in which we need getChild(1).
+        * Then we can forward the call via visit(ctx) to visitTerminal, visitExpression etc. Idk which one will be executed.
+        * The point is to find the right child to parse, so we don't need to call visitChildren
+        * which iterates on all of them and returns an array. I don't like arrays! it looks bad to do, like, visitChildren(ctx)[0][0][0]...
+        */
+        if (this._isSymbol(ctx.getChild(0))
+            && ctx.getChild(0).getSymbol().type == Parser.LPAREN) {
+                // This is the "LPAREN expression RPAREN", so parse child(1)
+                return ctx.getChild(1).accept(this);
         }
+
+        return ctx.getChild(0).accept(this);
     }
 
     /*********************** Helpers ***********************/
@@ -462,17 +528,37 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     }
 
     /**
-     * Handles a condition expression.
-     * @param {ParsingContext} ctx 
+     * Declares a new variable.
+     * @param {ParsingContext} ctx The parsing context.
+     * @param {VariableParsingContext} variableContext The parsing context of the variable label.
+     * @param {ValueNode} value The variable value node [optional].
+     * @return {VariableNode} The declared variable.
+     * @throws VariableAlreadyDefinedError
      */
-    _handleConditionExpression(ctx) {
-        this._printChilds(ctx);
-        process.exit(0);
+    _setVariable(ctx, variableContext, value) {
+        const variableName = variableContext.getText();
+
+        /* Is this variable declared before? */
+        if (this.isMeanie && this.symTable.exists(variableName)) {
+            throw new VariableAlreadyDefinedError(ctx, variableContext);
+        }
+
+        /* Did we got a value? */
+        if (!value) {
+            value = NodeFactory({
+                ctx: this._createContext(ctx),
+                type: NodeType.VARIABLE,
+                args: [variableName, ValueNode.NULL]
+            });
+        }
+
+        /* Add it to the table */
+        this.symTable.set(variableContext.getText(), value);
     }
 
     /**
      * Handles an arithmetic expression.
-     * This is an helper to handle the "expression", "multiplying_expression" and "pow_expression" rules,
+     * This is an helper to handle the mathematical expression rules.
      * as all of their logic is basically the same.
      * @param {ParsingContext} ctx 
      */
@@ -481,17 +567,13 @@ module.exports = class EvaluatorVisitor extends USVisitor {
          * An expression is a matematical style written content that get evaluated
          * by the math rules (* / before + -).
          * 
-         * Both "expression", "multiplying_expression" and "pow_expression"  works quite the same.
-         * There're three rules instead of one just in order to solve the order of precedence issue.
-         * 
-         * So lets see an example:
-         * expression is
-         *   multiplying_expression ((PLUS | MINUS) multiplying_expression)*
-         * 
-         * Note that pow_expression (The last child) forward to signed_atom, so that visit rule handles it.
-         * 
-         * Thus we might have a multiplying_expression or a multiplying_expression
-         * with another expression that's been added or reduced from it.
+         * Our rules are works on the same principal:
+         * arithmetic_expr
+         *  : next_arithmetic_expr
+         *  | arithmetic_expr OPERATOR arithmetic_expr
+         * Where `arithmetic_expr` is the actual rule, and `next_arithmetic_expr` is the next rule.
+         * 1) We need `arithmetic_expr` in the rule itself for recursion (nested rules, like "1 + 2").
+         * 2) The `next_arithmetic_expr` is the next order. We separate rules to respect the order of precedence.
          */
         
          // Do we got the (lparam op rparam) writestyle or we
@@ -511,6 +593,15 @@ module.exports = class EvaluatorVisitor extends USVisitor {
 
          /* We don't do an arithmetic operation, so just forward */
          return ctx.getChild(0).accept(this);
+    }
+
+    /**
+     * Handles a condition expression.
+     * @param {ParsingContext} ctx 
+     */
+    _handleConditionExpression(ctx) {
+        this._printChilds(ctx);
+        process.exit(0);
     }
 
     /**

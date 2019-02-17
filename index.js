@@ -7,8 +7,9 @@ hey
     is meanie
     
     sup chocolate1
-    chocolate1 is 1k + 2k
+    chocolate1 is 1k same 2k
 
+    BARRIER!
     sup chocolate2
     woah chocolate2 is "123"
     
@@ -16,7 +17,6 @@ hey
         chocolate1 is chocolate1 * 3
     yay!
 
-    BARRIER!
     anw chocolate1 big 2k also chocolate1 small 4k also chocolate2 same "123"?
         chocolate1 is chocolate1 * 3
     yay!

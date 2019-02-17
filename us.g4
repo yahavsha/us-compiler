@@ -20,13 +20,12 @@ code_block
 statement
    : comment
    | declaration
-   | assignment
    | condition_block
+   | expression
    | for_block
    | while_block
    | return_statement
    ;
-
 
 comment
    : COMMENT
@@ -36,22 +35,18 @@ comment
 /****************** Variables decl ******************/
 declaration
    : VAR_DECL LABEL
-   | VAR_DECL_ASSGN assignment
-   ;
-
-assignment
-   : LABEL ASSIGNMENT expression
+   | VAR_DECL_ASSGN? assignment_expression
    ;
 
 /****************** Expressions ******************/
 
 expression
     :   assignment_expression
-    |   expression ',' assignment_expression
     ;
 
 assignment_expression
     :   conditional_expression
+    |   unary_expression ASSIGNMENT expression
     // |   unaryExpression assignmentOperator assignmentExpression
     // |   DigitSequence // for
     ;
@@ -66,24 +61,28 @@ logical_or_expression
     ;
 
 logical_and_expression
-    :   inclusive_or_expression
+    // :   inclusive_or_expression
+    :   equality_expression
     |   logical_and_expression LOGICAL_AND logical_and_expression
     ;
 
-inclusive_or_expression
-    :   exclusive_or_expression
-    |   inclusive_or_expression '|' inclusive_or_expression
-    ;
+// Note: I'm leaving it here in case we want to extend the grammer at later point
+// If we do, we should also remove the error of "inclusive_or_expression" above in the "logical_and_expression"
+// and replace it with the "equality_expression"
+// inclusive_or_expression
+//     :   exclusive_or_expression
+//     |   inclusive_or_expression '|' inclusive_or_expression
+//     ;
 
-exclusive_or_expression
-    :   and_expression
-    |   exclusive_or_expression '^' exclusive_or_expression
-    ;
+// exclusive_or_expression
+//     :   and_expression
+//     |   exclusive_or_expression '^' exclusive_or_expression
+//     ;
 
-and_expression
-    :   equality_expression
-    |   and_expression '&' and_expression
-    ;
+// and_expression
+//     :   equality_expression
+//     |   and_expression '&' and_expression
+//     ;
 
 equality_expression
     :   relational_expression
@@ -92,31 +91,33 @@ equality_expression
     ;
 
 relational_expression
-    :   shift_expression
+    // :   shift_expression
+    :   additive_expression
     |   relational_expression '<' relational_expression
     |   relational_expression '>' relational_expression
     |   relational_expression '<=' relational_expression
     |   relational_expression '>=' relational_expression
     ;
 
-shift_expression
-    :   additive_expression
-    |   shift_expression '<<' shift_expression
-    |   shift_expression '>>' shift_expression
-    ;
+// Again, I'm leaving it here for future use.
+// shift_expression
+//     :   additive_expression
+//     |   shift_expression '<<' shift_expression
+//     |   shift_expression '>>' shift_expression
+//     ;
 
 additive_expression
     :   multiplicative_expression
-    |   additive_expression '+' additive_expression
-    |   additive_expression '-' additive_expression
+    |   additive_expression PLUS additive_expression
+    |   additive_expression MINUS additive_expression
     ;
 
 
 multiplicative_expression
     :   power_expression
-    |   multiplicative_expression '*' multiplicative_expression
-    |   multiplicative_expression '/' multiplicative_expression
-    |   multiplicative_expression '%' multiplicative_expression
+    |   multiplicative_expression MULTIPLY multiplicative_expression
+    |   multiplicative_expression DIVIDE multiplicative_expression
+    |   multiplicative_expression MOD multiplicative_expression
     ;
 
 power_expression
@@ -133,12 +134,14 @@ unary_expression
     :   postfix_expression
     |   PLUS unary_expression
     |   MINUS unary_expression
+    |   UNARY_PLUS unary_expression
+    |   UNARY_MINUS unary_expression
     ;
 
 postfix_expression
     :   primary_expression
-    |   postfix_expression '++'
-    |   postfix_expression '--'
+    |   postfix_expression UNARY_PLUS
+    |   postfix_expression UNARY_MINUS
     ;
 
 primary_expression
@@ -264,6 +267,8 @@ MULTIPLY                : '*';
 DIVIDE                  : '/';
 MOD                     : '%';
 POWER                   : '^';
+UNARY_PLUS              : '++';
+UNARY_MINUS             : '--';
 
 // General values
 NUMBER
