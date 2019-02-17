@@ -13,7 +13,7 @@ module.exports = class VariableNode extends Node {
     }
 
     toString() {
-        return `VariableNode(name = "${this.name}" )`;
+        return `VariableNode(name = "${this.name}")`;
     }
     
     eval() {

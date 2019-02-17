@@ -15,8 +15,7 @@ const EvaluationContext = require('./EvaluationContext');
 const SymbolTable = require('../utils/SymbolTable');
 
 /* Access to nodes */
-const { Node, NodeFactory, NodeType } = require('../nodes');
-const ValueNode = require('../nodes/ValueNode');
+const { Node, NodeFactory, NodeType, ValueNode, VariableNode } = require('../nodes');
 
 /* Types resolution */
 const {
@@ -24,6 +23,7 @@ const {
     isTypeSymbol,
     isTypeLiteralSymbol,
     createJSValue,
+    isUnaryOPSymbol
 } = require('../utils/TypesResolver');
 
 /* Conditions */
@@ -154,6 +154,12 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     }
 
     visitStatement(ctx) {
+        // console.log('');
+        // console.log('='.repeat(25));
+        // console.log('Childs List:');
+        // this._printChilds(ctx);
+        // console.log('='.repeat(25));
+        // console.log('');
         const EVALUATE_NODES = [
             NodeType.IF_STATEMENT,
             NodeType.WHILE_LOOP
@@ -195,7 +201,8 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         if (isTypeLiteralSymbol(symbolType)
             || isComparatorSymbol(symbolType)
             || isLogicalOperatorSymbol(symbolType)
-            || isOPSymbol(symbolType)) {
+            || isOPSymbol(symbolType)
+            || isUnaryOPSymbol(symbolType)) {
             return symbolType;
         }
 
@@ -353,7 +360,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
                 }
 
                 /* Plain variable declaration */
-                return this._setVariable(ctx, ctx.getChild(1));
+                return this._setVariable(ctx, ctx.getChild(1).getText());
             } else {
                 /* This is assignment_expression */
                 return ctx.getChild(1).accept(this);
@@ -390,7 +397,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         /* Get the underlaying value */
         let value = ctx.getChild(2).accept(this);
         
-        this._setVariable(ctx, variable, value);
+        this._setVariable(ctx, variable.getText(), value);
     }
 
     /**
@@ -579,14 +586,12 @@ module.exports = class EvaluatorVisitor extends USVisitor {
             return ctx.getChild(0).accept(this);
         }
 
-        console.log('applying unary ');
-
         /* Get the actual expression to which we apply the unary value.
         For example, "--a" then the expression is "a". Note that we can actually nested this thing,
         to get "--++a" (that's equal to a). */
         let expr = ctx.getChild(1).accept(this);
-
-        /* Apply the unary operator */
+        
+        /* If it's plus or minus, return the right value */
         const unaryOp = ctx.getChild(0).accept(this);
 
         if (unaryOp === Parser.MINUS) {
@@ -604,20 +609,19 @@ module.exports = class EvaluatorVisitor extends USVisitor {
                     })
                 ]
             });
+        } else if (unaryOp == Parser.PLUS) {
+            /* If the sign is a plus, we don't need to do anything. Why? because
+                plus * plus = plus
+                minus * plus = minus
+                plus * minus = minus
+                minus * minus = plus.
+            */
+            return expr;
         }
 
-        /* the -(value) was a unique operator casue it require a multiplication. The rest require an addition
-        operation so we can shorten the code */
+        /* What's the value we're gonna add? */
         let addedValue = 0;
         switch (unaryOp) {
-            case Parser.PLUS:
-                /* If the sign is a plus, we don't need to do anything. Why? because
-                    plus * plus = plus
-                    minus * plus = minus
-                    plus * minus = minus
-                    minus * minus = plus.
-                */
-                return expr;
             case Parser.UNARY_PLUS:
                 addedValue = 1;
                 break;
@@ -628,8 +632,8 @@ module.exports = class EvaluatorVisitor extends USVisitor {
                 throw new Error('Could not resolve the requested unary operator.');
         }
 
-        
-        return NodeFactory({
+        /* Create the value */
+        let value = NodeFactory({
             ctx: this._createContext(ctx),
             type: NodeType.ARITHMETIC_OPERATION,
             args: [
@@ -642,6 +646,17 @@ module.exports = class EvaluatorVisitor extends USVisitor {
                 })
             ]
         });
+
+        /* Is this a variable? */
+        if (expr instanceof VariableNode) {
+            /* Update the variable and return IT instead. That'll allow to chain --++++-- etc. Otherwise, we'll
+            stop after one unary op as we'll have arithmetic node and not variable node */
+            this._setVariable(ctx, expr.name, value);
+            return expr;
+        }
+
+        /* Return it */
+        return value;
     }
 
     /**
@@ -658,7 +673,56 @@ module.exports = class EvaluatorVisitor extends USVisitor {
     * </code>
     */
     visitPostfix_expression(ctx) {
-        return ctx.getChild(0).accept(this);
+        /*  If it doesn't have a postfix unary op we should just move forward. Otherwise, we need to aply it */
+        if (ctx.children.length === 1) {
+            // Forward
+            return ctx.getChild(0).accept(this);
+        }
+
+        /* Get the actual expression to which we apply the unary value. */
+        let expr = ctx.getChild(0).accept(this);
+        
+        /* Get the unary op */
+        const unaryOp = ctx.getChild(1).accept(this);
+
+        /* What's the value we're gonna add? */
+        let addedValue = 0;
+        switch (unaryOp) {
+            case Parser.UNARY_PLUS:
+                addedValue = 1;
+                break;
+            case Parser.UNARY_MINUS:
+                addedValue = -1;
+                break;
+            default:
+                throw new Error('Could not resolve the requested unary operator.');
+        }
+
+        /* Create the value */
+        let value = NodeFactory({
+            ctx: this._createContext(ctx),
+            type: NodeType.ARITHMETIC_OPERATION,
+            args: [
+                expr,
+                Parser.PLUS,
+                NodeFactory({
+                    ctx: this._createContext(ctx),
+                    type: NodeType.VALUE,
+                    args: [Parser.NUMBER, addedValue]
+                })
+            ]
+        });
+
+        /* Is this a variable? */
+        if (expr instanceof VariableNode) {
+            /* Update the variable and return IT instead. That'll allow to chain --++++-- etc. Otherwise, we'll
+            stop after one unary op as we'll have arithmetic node and not variable node */
+            this._setVariable(ctx, expr.name, value);
+            return expr;
+        }
+
+        /* Return it */
+        return value;
     }
 
     /**
@@ -719,9 +783,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      * @return {VariableNode} The declared variable.
      * @throws VariableAlreadyDefinedError
      */
-    _setVariable(ctx, variableContext, value) {
-        const variableName = variableContext.getText();
-        
+    _setVariable(ctx, variableName, value) {
         /* Did we got a value? */
         if (!value) {
             value = NodeFactory({
@@ -737,7 +799,7 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         }
 
         /* Add it to the table */
-        this.symTable.addOrSet(variableContext.getText(), value);
+        this.symTable.addOrSet(variableName, value);
         debug(`Assigning "${variableName}" to ${value}`);
     }
 

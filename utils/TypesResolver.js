@@ -130,6 +130,10 @@ for (let token of [Parser.PLUS, Parser.MINUS, Parser.MULTIPLY, Parser.DIVIDE, Pa
     VALID_ARITHMETIC_OP_MAP[token] = trimChars(literalNames[token], "'");
 }
 
+let VALID_UNARY_OP_MAP = {};
+for (let token of [Parser.UNARY_PLUS, Parser.UNARY_MINUS]) {
+    VALID_UNARY_OP_MAP[token] = trimChars(literalNames[token], "'");
+}
 /*****************************************************************************
  * The API methods
  *****************************************************************************/
@@ -158,6 +162,15 @@ function isTypeLiteralSymbol(symbol) {
  */
 function isOPSymbol(symbol) {
     return Object.keys(VALID_ARITHMETIC_OP_MAP).indexOf(String(symbol)) > -1;
+}
+
+
+/**
+ * Determine if the given symbol int is a valid unary operator symbol (e.g. +, -...).
+ * @param {int} symbol 
+ */
+function isUnaryOPSymbol(symbol) {
+    return Object.keys(VALID_UNARY_OP_MAP).indexOf(String(symbol)) > -1;
 }
 
 /**
@@ -279,6 +292,7 @@ module.exports = {
     createJSValue,
     arithmeticOperationToString,
     isOPSymbol,
+    isUnaryOPSymbol,
     createUSValue,
     castValue
 };

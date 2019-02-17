@@ -135,16 +135,14 @@ cast_expression
     ;
 
 unary_expression
-    :   postfix_expression
-    |   PLUS unary_expression
-    |   MINUS unary_expression
-    |   UNARY_PLUS unary_expression
+    :   UNARY_PLUS unary_expression
     |   UNARY_MINUS unary_expression
+    |   postfix_expression // It's important that we firstly get the unary operator and only then apply the postfix form
     ;
 
 postfix_expression
     :   primary_expression
-    |   postfix_expression UNARY_PLUS
+    |   primary_expression UNARY_PLUS
     |   postfix_expression UNARY_MINUS
     ;
 
@@ -253,7 +251,7 @@ ELSE:                   'gosh';
 ELSE_SUFFIX:            'ugh!';
 FOR:                    'hides';
 FOR_TERMINATOR:         'til';
-FOR_SUFFIX:             'gotcha!';
+FOR_SUFFIX:             'foundya!';
 WHILE:                  'huh';
 WHILE_SUFFIX:           'stop!';
 RETURN:                 'gimme';

@@ -200,7 +200,7 @@ For example:
 hey!
 	hides (i is 1; i++) til (i same 50)
 		shh shh... Code
-	gotcha!
+	foundya!
 byes
 ```
 
