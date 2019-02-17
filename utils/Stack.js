@@ -49,8 +49,7 @@ module.exports = class Stack {
      * @return {*} The most top element at the stack.
      */
     peek() {
-        if (this.isEmpty())
-        {
+        if (this.isEmpty()) {
             throw new Error('The stack is empty.');
         }
 
@@ -62,11 +61,18 @@ module.exports = class Stack {
      * @return {*} The popped element.
      */
     pop() {
-        if (this.isEmpty())
-        {
+        if (this.isEmpty()) {
             throw new Error('The stack is empty.');
         }
 
         return this._elements.pop();
+    }
+
+    /**
+     * Gets the array representation of the stack.
+     * @return {Array}
+     */
+    toArray() {
+        return this._elements;
     }
 };
