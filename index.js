@@ -8,12 +8,23 @@ hey
     
     sup chocolate1
     shh shh...chocolate1 is 1k same 2k also 2k diff 3k also 3k same 2k
-    chocolate1 is 5k
+    chocolate1 is 3k
 
+    anw nop?
+        chocolate1 is chocolate1 * 3
+    yay!
+	gosh anw chocolate1 big 2k?
+        chocolate1 is chocolate1 * 6
+    yay!
+    gosh
+        chocolate is chocolate * 8
+    ugh!
+
+    BARRIER!
     sup castedChocolate
     woah castedChocolate is (cosplay chocolate1 as Words)
 
-    BARRIER!
+
     sup chocolate2
     woah chocolate2 is "123"
     

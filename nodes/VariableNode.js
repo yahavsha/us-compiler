@@ -13,7 +13,7 @@ module.exports = class VariableNode extends Node {
         this.value = value;
     }
 
-    static getType() {
+    getType() {
         return NodeType.VARIABLE;
     }
 

@@ -1,27 +1,43 @@
 /*****************************************************************************
  * Load the required libraries
  *****************************************************************************/
-
- /* Node data */
-const { Node, NodeType } = require('./Node');
-
-/* A table used to track the defined symbols in this scope */
-const SymbolTable = require('../utils/SymbolTable');
+ 
+ /* Access to nodes */
+ const { Node, NodeType } = require('./Node');
 
 /*****************************************************************************
- * Define the scope node
+ * The code block class
  *****************************************************************************/
 
 module.exports = class ScopeNode extends Node {
-    constructor(ctx) {
+    /**
+     * Instantiate a new code block (scope) instance.
+     * @param {ParsingContext} ctx The parsing contex.
+     * @param {ParsingContext} statementsContext The parsing context of the statements that we should execute.
+     * @param {USVisitor} visitor The visitor that should be used to evaluate the statements.
+     */
+    constructor(ctx, statementsContext, visitor) {
         super(ctx);
+        
+        this.statements = statementsContext;
+        this.visitor = visitor;
     }
 
-    static getType() {
+    /**
+     * Gets the node type.
+     */
+    getType() {
         return NodeType.SCOPE;
     }
-    
-    eval() {
-        console.log('Evaluating Code Block');
+
+    toString() {
+        return `ScopeNode { ... }`;
     }
-}
+    
+    /**
+     * Evaluates the node and get a ValueNode from it. Only ValueNode actually returns the ES6 value.
+     */
+    eval() {
+        return this.statements.accept(this.visitor);
+    }
+};

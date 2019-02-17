@@ -93,10 +93,10 @@ equality_expression
 relational_expression
     // :   shift_expression
     :   additive_expression
-    |   relational_expression '<' relational_expression
-    |   relational_expression '>' relational_expression
-    |   relational_expression '<=' relational_expression
-    |   relational_expression '>=' relational_expression
+    |   relational_expression COMPARE_SMALLER relational_expression
+    |   relational_expression COMPARE_GREATER relational_expression
+    |   relational_expression COMPARE_SMALLER_EQUAL relational_expression
+    |   relational_expression COMPARE_GREATER_EQUAL relational_expression
     ;
 
 // Again, I'm leaving it here for future use.
@@ -145,12 +145,12 @@ postfix_expression
     ;
 
 primary_expression
-    : LABEL
-    | NUMBER
+    : NUMBER
     | STRING
     | NULL
     | TRUE
     | FALSE
+    | LABEL
     | LPAREN expression RPAREN
     | function_call
     ;
@@ -167,7 +167,9 @@ type_specifiers
 // If-Else
 condition_block
     : IF expression CONDITION_SUFFIX statement* IF_SUFFIX
-    | IF expression CONDITION_SUFFIX statement* IF_SUFFIX (ELSE condition_block)? ELSE statement* ELSE_SUFFIX
+    | IF expression CONDITION_SUFFIX statement* IF_SUFFIX ELSE condition_block
+    | IF expression CONDITION_SUFFIX statement* IF_SUFFIX ELSE condition_block ELSE statement* ELSE_SUFFIX
+    | IF expression CONDITION_SUFFIX statement* IF_SUFFIX ELSE statement* ELSE_SUFFIX
     ;
 
 // For loop
@@ -234,7 +236,9 @@ VAR_CAST_TO:            'as';
 COMPARE_EQUAL:          'same';
 COMPARE_NOT_EQUAL:      'diff';
 COMPARE_GREATER:        'big';
+COMPARE_GREATER_EQUAL:  'big^';
 COMPARE_SMALLER:        'small';
+COMPARE_SMALLER_EQUAL:  'small^';
 LOGICAL_AND:            'also';
 LOGICAL_OR:             'or';
 LOGICAL_NOT:            'nah';

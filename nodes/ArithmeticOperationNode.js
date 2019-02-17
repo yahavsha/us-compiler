@@ -42,7 +42,7 @@ module.exports = class ArithmeticOperationNode extends Node {
         this.rparam = rparam;
     }
 
-    static getType() {
+    getType() {
         return NodeType.ARITHMETIC_OPERATION;
     }
 

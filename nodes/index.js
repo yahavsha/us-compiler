@@ -35,6 +35,8 @@ const ArithmeticOperationNode = require('./ArithmeticOperationNode');
 const CastingNode = require('./CastingNode');
 const ConditionalExpressionNode = require('./ConditionalExpressionNode');
 const ConditionNode = require('./ConditionNode');
+const IfStatementNode = require('./IfStatementNode');
+const ScopeNode = require('./ScopeNode');
 
 /**
  * Instantiate a new {@see Node} from the given node type and arguments.
@@ -75,6 +77,10 @@ function NodeFactory(options = {
             return new ConditionalExpressionNode(... options.args);
         case NodeType.CONDITION:
             return new ConditionNode(... options.args);
+        case NodeType.SCOPE:
+            return new ScopeNode(... options.args);
+        case NodeType.IF_STATEMENT:
+            return new IfStatementNode(... options.args);
         default:
             throw new Error("NodeFactory: Unknown node type requested: " + options.type);
     }
@@ -87,5 +93,9 @@ module.exports = {
     ValueNode,
     VariableNode,
     ArithmeticOperationNode,
-    CastingNode
+    CastingNode,
+    ConditionalExpressionNode,
+    ConditionNode,
+    ScopeNode,
+    IfStatementNode
 };

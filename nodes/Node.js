@@ -1,11 +1,13 @@
 module.exports.NodeType = {
     UNKNOWN:                -1,
-    VALUE:                  1,
-    VARIABLE:               2,
-    ARITHMETIC_OPERATION:   3,
-    CASTING:                4,
-    CONDITION_EXPR:         5,
-    CONDITION:              6
+    SCOPE:                  1,
+    VALUE:                  2,
+    VARIABLE:               3,
+    ARITHMETIC_OPERATION:   4,
+    CASTING:                5,
+    CONDITION_EXPR:         6,
+    CONDITION:              7,
+    IF_STATEMENT:           8
 };
 
 class Node {
@@ -24,7 +26,7 @@ class Node {
     /**
      * Gets the node type.
      */
-    static getType() {
+    getType() {
         return NodeType.UNKNOWN;
     }
     

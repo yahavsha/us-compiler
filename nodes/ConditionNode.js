@@ -39,7 +39,7 @@ module.exports = class ConditionNode extends Node {
         this.chainedExpression = chainedExpression;
     }
 
-    static getType() {
+    getType() {
         return NodeType.CONDITION;
     }
     
@@ -56,6 +56,18 @@ module.exports = class ConditionNode extends Node {
          * This is the eval() recursion stop rule. */
         if (typeof(this.logicalOp) === 'undefined') {
             return this.expression.eval();
+        }
+
+        let left = this.expression.eval().eval(); // The eval.eval evaluates the ValueNode to JS value.
+        let right = this.chainedExpression.eval().eval();
+        
+        switch (this.logicalOp) {
+            case Parser.LOGICAL_AND:
+                return left && right ? ValueNode.TRUE : ValueNode.FALSE;
+            case Parser.LOGICAL_OR:
+                return left || right ? ValueNode.TRUE : ValueNode.FALSE;
+            default:
+                throw new Error('The requested logical operator could not be resolved.');
         }
     }
 }

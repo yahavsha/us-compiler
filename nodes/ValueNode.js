@@ -14,12 +14,20 @@ module.exports = class ValueNode extends Node {
         this.value = createJSValue(type, value);
     }
     
-    static getType() {
+    getType() {
         return NodeType.VALUE;
     }
 
     static get NULL() {
         return new ValueNode({}, Parser.NULL, null);
+    }
+
+    static get TRUE() {
+        return new ValueNode({}, Parser.TRUE, true);
+    }
+
+    static get FALSE() {
+        return new ValueNode({}, Parser.FALSE, false);
     }
 
     toString() {

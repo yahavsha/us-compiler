@@ -12,7 +12,9 @@ const { trimChars, createLiteralMap } = require('./ParsingHelpers');
 
 /* Defines a list of comparators map */
 VALID_COMPARATOR_SYMBOLS = {};
-for (let token of [Parser.COMPARE_EQUAL, Parser.COMPARE_NOT_EQUAL, Parser.COMPARE_GREATER, Parser.COMPARE_SMALLER]) {
+for (let token of [Parser.COMPARE_EQUAL, Parser.COMPARE_NOT_EQUAL,
+                   Parser.COMPARE_GREATER, Parser.COMPARE_SMALLER,
+                   Parser.COMPARE_GREATER_EQUAL, Parser.COMPARE_SMALLER_EQUAL]) {
     VALID_COMPARATOR_SYMBOLS[token] = trimChars(literalNames[token], "'");
 }
 

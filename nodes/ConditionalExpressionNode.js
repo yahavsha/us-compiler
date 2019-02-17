@@ -22,7 +22,7 @@ module.exports = class ConditionalExpressionNode extends Node {
         this.rparam = rparam;
     }
 
-    static getType() {
+    getType() {
         return NodeType.CONDITION_EXPR;
     }
     
@@ -62,10 +62,6 @@ module.exports = class ConditionalExpressionNode extends Node {
                 throw new Error('Unknown comparator operator detected.');
         }
 
-        return Node.getNodeFactory()({
-            ctx: this.context,
-            type: NodeType.VALUE,
-            args: [result ? Parser.TRUE : Parser.FALSE, result]
-        });
+        return result ? ValueNode.TRUE : ValueNode.FALSE;
     }
 }

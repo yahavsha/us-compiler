@@ -16,7 +16,7 @@ const SymbolTable = require('../utils/SymbolTable');
 const Stack = require('../utils/Stack');
 
 /* Access to nodes */
-const { NodeFactory, NodeType } = require('../nodes');
+const { Node, NodeFactory, NodeType } = require('../nodes');
 const ValueNode = require('../nodes/ValueNode');
 
 /* Types resolution */
@@ -115,6 +115,23 @@ module.exports = class EvaluatorVisitor extends USVisitor {
         this.isMeanie = true;
     }
 
+    visitStatement(ctx) {
+        const EVALUATE_NODES = [
+            NodeType.IF_STATEMENT
+        ];
+
+        /* Visit each child */
+        for (let i = 0; i < ctx.children.length; i++) {
+            let child = ctx.getChild(i).accept(this);
+            
+            /* If this is a code block related statements, evaluate them now */
+            
+            if (child instanceof Node && EVALUATE_NODES.indexOf(child.getType()) >= -1) {
+                child.eval();
+            }
+        }
+    }
+
     /**
      * Visit a terminal node. We'll get here in case we're dealing with plain primitive value such as
      * number, string and variable. We'll use this method to retrieve the variable value.
@@ -158,6 +175,68 @@ module.exports = class EvaluatorVisitor extends USVisitor {
 
         debug("Could not resolve the terminal node as it's not a symobl.");
         return undefined;
+    }
+
+    /**
+     * Executed when a condition statement is being used.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        condition_block
+            : IF expression CONDITION_SUFFIX statement* IF_SUFFIX (ELSE condition_block)?
+            | IF expression CONDITION_SUFFIX statement* IF_SUFFIX (ELSE condition_block)? ELSE statement* ELSE_SUFFIX
+            ;
+     * </code>
+     */
+    visitCondition_block(ctx) {
+        /* Get the condition */
+        const expression = ctx.getChild(1).accept(this);
+        const evalContext = this._createContext(ctx);
+
+        /* Create the if true and if false code blocks */
+        let ifTrue = undefined;
+        let ifFalse = undefined;
+        let elseIndexDistance = 0;
+        if (!this._isSymbol(ctx.getChild(3))) {
+            ifTrue = NodeFactory({
+                ctx: evalContext,
+                type: NodeType.SCOPE,
+                args: [ctx.getChild(3), this]
+            });
+        } else {
+            /*
+             We didn't have a statements block. For example:
+             if (foo) {
+             } else {
+                 // code
+             }
+             So we should skip on that extra index as it doesn't exists
+             */
+            elseIndexDistance = -1; 
+        }
+
+        /* Do we have an else block? */
+        if (ctx.children.length > 5) {
+            /* Did we got nested else? */
+            if (ctx.getChild(6 + elseIndexDistance).ruleIndex === Parser.RULE_statement) {
+                /* This is a standard "else" without "if else" */
+                ifFalse = NodeFactory({
+                    ctx: evalContext,
+                    type: NodeType.SCOPE,
+                    args: [ctx.getChild(6 + elseIndexDistance), this]
+                });
+            } else {
+                /* This is an "else if". We should just nest it. */
+                ifFalse = ctx.getChild(6 + elseIndexDistance).accept(this);
+            }
+        }
+        
+        return NodeFactory({
+            ctx: evalContext,
+            type: NodeType.IF_STATEMENT,
+            args: [expression, ifTrue, ifFalse]
+        });
     }
 
     /**
@@ -307,10 +386,10 @@ module.exports = class EvaluatorVisitor extends USVisitor {
      * <code>
         relational_expression
             :   additive_expression
-            |   relational_expression '<' relational_expression
-            |   relational_expression '>' relational_expression
-            |   relational_expression '<=' relational_expression
-            |   relational_expression '>=' relational_expression
+            |   relational_expression COMPARE_SMALLER relational_expression
+            |   relational_expression COMPARE_GREATER relational_expression
+            |   relational_expression COMPARE_SMALLER_EQUAL relational_expression
+            |   relational_expression COMPARE_GREATER_EQUAL relational_expression
             ;
      * </code>
      */
