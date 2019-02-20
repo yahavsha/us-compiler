@@ -1,5 +1,5 @@
 const assert = require('assert');
-const SymbolTable = require('../utils/SymbolTable');
+const SymbolTable = require('../evaluation/symbols/SymbolTable');
 
 describe('SymbolTable', function() {
     it('Should store values on the root scope', () => {

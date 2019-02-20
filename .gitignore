@@ -83,7 +83,7 @@ typings/
 .DS_Store
 
 #The lib directory (contains the generated ANTLR files)
-ast/
+lib/
 .antlr/
 runtime/
 

@@ -6,7 +6,11 @@ let input = `
 hey
     is meanie
     
-    sum is 1
+    sup sum
+    sum is 1 + 2
+
+    BARRIER! 
+    sum is sum + 1
 
 	hides (i is 1; ++i) til (i same 50)
         sum is sum + i
@@ -14,8 +18,6 @@ hey
     foundya!
 
 
-
-    BARRIER! 
 	hides (i is 1; i++) til (i same 50)
 		shh shh... Code
     foundya!
@@ -70,7 +72,14 @@ try {
     interperter.interpert(input);
 } catch (e) {
     throw e;
-    console.error('** Error Was Thrown **');
-    console.log(e.message);
-    console.log(e.getUnderlineError());
+    try {
+    console.error('\n\n** Error Was Thrown **');
+    console.error(e.message);
+    console.error(e.getUnderlineError());
+
+    console.error('Stack Trace:');
+    console.error(e.getStackTrace());
+    console.error('');
+    } catch {}
+    throw e;
 }

@@ -1,4 +1,5 @@
 const antlr4 = require('antlr4');
+const ASTContext = require('../ast/ASTContext');
 
 /**
  * Sets a single character at a given index of a string.
@@ -58,6 +59,14 @@ class CompilationError extends Error {
      */
     getUnderlineError() {
         throw new Error('Not Implemented');
+    }
+
+    /**
+     * Gets the error stack trace.
+     * @return {string}.
+     */
+    getStackTrace() {
+        return '';
     }
 }
 
@@ -137,86 +146,49 @@ class SyntaxError extends CompilationError {
  class SemanticError extends CompilationError {
      /**
       * Defines a semantic error. A semantic error might be caused as variable is been defined again, a function doesnt exists etc.
-      * Note that the way this error handler is functioning is bit complex. There're 3 overloads for the ctor, and as javascript
-      * doesn't support normal overloading ᕙ(⇀‸↼‶)ᕗ.
-      * The available constructor calls (in NORMAL notation):
-      * ```java
-      *     SemanticError(String message, ParsingContext ctx);
-      *     SemanticError(String message, ParsingContext ctx, TerminalNode node);
-      *     SemanticError(String message, PrasingContext ctx, int column, int start, int stop);
-      * ```    
-      * 1. The first overload gets just the message and context. The issue in the line will be detected automatically from the ctx.
-      *    It'll just choose the entire parsing rule. Thus, if you're in the meanie rule, "is meanie" will be marked entirely.
-      * 2. The second overload gets the problematic portion of the line from the given node.
-      * 3. The third overload uses plain column, start and stop indexes to manually mark the line.
-      * 
       * @param {string} message The message to display.
-      * @param {*} ctx The parsing context.
-      * @param {*} column The node or an int, see above [optional].
-      * @param {*} start The start position [optional].
-      * @param {*} stop The end position [optional].
+      * @param {ASTContext} ctx The AST parsing context.
       */
-    constructor(message, ctx, column, start, stop) {
+    constructor(message, ctx) {
         super(''); // We can't format yet the message, so we'll do it ourseleves later.
 
         /* Save the new data */
-        this.ctx = ctx;
-        
-        let detailedContext = this._isSymbol(ctx) ? ctx.symbol : ctx; // If we have a symbol, we should use it to get the line & column.
-        this.lineNumber = typeof(detailedContext.line) == 'number' ? detailedContext.line : detailedContext.start.line;
+        this.msg = message;
+        this.setContext(ctx);
 
-        /* If we haven't been told which part in the code to mark, we'll guess it's the ctx current symbol.
-        For example, if the exception is been thrown from meanie_instruction rule, then
-            is meanie
-            ^^^^^^^^^
-        will be produced */
-        if (typeof(column) === 'undefined') {
-            this.column = typeof(detailedContext.column) == 'number' ? detailedContext.column : detailedContext.start.column;
-            this.start = typeof(detailedContext.start) == 'number' ? detailedContext.start : detailedContext.start.start;
-            this.stop = typeof(detailedContext.stop) == 'number' ? detailedContext.stop : detailedContext.stop.stop;
-        } else if (typeof(column) === 'object') {
-            while (column && !column.symbol) { // This will allow to send a general parsing context and will find the terminal node of the variable.
-                column = column.getChild(0);
-            }
-
-            const symbol = column.symbol;
-
-            this.column = symbol.column;
-            this.start = symbol.start;
-            this.stop = symbol.stop;
-        } else {
-            this.column = column;
-            this.start = start;
-            this.stop = stop;
-        }
-
-        // NOW, we can forma it! :D
-        this.message = formatMessage(message, this.lineNumber, this.column);
+        // Remove ourselves from the NodeJS stack
+        Error.captureStackTrace(this, SemanticError);
     }
 
-    /**
-     * Get the
-     */
+    setContext(ctx) {
+        this.ctx = ctx;
+        if (this.ctx) {
+            this.lineNumber = this.ctx.line;
+            this.column = this.ctx.column;
+            this.start = this.ctx.start;
+            this.stop = this.ctx.stop;
+            this.message = formatMessage(this.msg, this.lineNumber, this.column);
+        } else {
+            this.message = this.msg;
+        }
+    }
+
     getErrorLine() {
-        /* Get the parser. We might not have it in this context, so we should go up in the tree */
-        let ptr = this.ctx;
-        let parser = undefined;
-        while (ptr && !parser) {
-            parser = ptr.parser;
-            ptr = ptr.parentCtx;
+        if (!this.ctx) {
+            return -1;
         }
 
-        /* Grab the actual code input (the entire code contents) */
-        const tokens = new antlr4.CommonTokenStream(parser.getInputStream());
-        const input = tokens.tokenSource.tokenSource.inputStream.toString();
-        
-        /* Split into lines */
-        const lines = input.split(/\r?\n/);
-
-        return lines[this.lineNumber - 1]; // Lines are 1...n while arrays are 0...(n-1)
+        return this.ctx.codeLines[this.lineNumber - 1]; // Lines are 1...n while arrays are 0...(n-1)
     }
     
-    getUnderlineError() {
+    getUnderlineError(options = {
+        extraLines: 1,
+        includeLineNumbers: true
+    }) {
+        if (!this.ctx) {
+            return '';
+        }
+        
         /* Gets the error line */
         let errorLine = this.getErrorLine();
         
@@ -232,8 +204,60 @@ class SyntaxError extends CompilationError {
             }
         }
 
-        /* Done */
-        return errorLine + "\n" + underline;
+        /* Finalize it */
+        let output = {};
+        
+        if (options.includeLineNumbers) {
+            // if we have line numbers, the ^^^^^ thingy should get pushed away
+            // by the number of digits + ". ". For example if the line is 5, then by 3 ("5. " is 3 chars)
+            // but if it's line 1000 then by 4 + 2 = 6 (". " = 2 chars + "1000" = 4 chars).
+            underline = ' '.repeat(String(this.lineNumber).length + 2) + underline;
+        }
+
+        output[this.lineNumber] = errorLine + "\n" + underline;
+
+        /* Should we include lines before and after it? */
+        if (options.extraLines > 0) {
+            const len = this.ctx.codeLines.length;
+            for (let i = 1; i <= options.extraLines; i++) {
+                if (this.lineNumber + i - 1 < len - 1) {
+                    // We can take that line too (it's further in the code, the n+i)
+                    output[this.lineNumber + i] = this.ctx.codeLines[this.lineNumber + i - 1];
+                }
+
+                if (this.lineNumber - i - 1 >= 0) {
+                    // We can take that too, it's the n-i line.
+                    output[this.lineNumber - i] = this.ctx.codeLines[this.lineNumber - i - 1];
+                }
+            }
+        }
+
+        /* Add line numbers? */
+        if (options.includeLineNumbers) {
+            let lines = [];
+            Object.keys(output).forEach(l => lines.push(`${l}. ${output[l]}`));
+            return lines.join('\n');
+        }
+
+        return Object.values(output).join("\n");
+    }
+
+    /**
+     * Gets the error stack trace.
+     * @return {string}.
+     */
+    getStackTrace() {
+        if (!this.ctx || !this.ctx.stackTrace) {
+            return '';
+        }
+
+        let builder = [];
+        while (!this.ctx.stackTrace.isEmpty()) {
+            let scope = this.ctx.stackTrace.pop();
+            builder.push(`\tat ${scope}`);
+        }
+
+        return builder.join('\n');
     }
 
     /**
@@ -246,25 +270,36 @@ class SyntaxError extends CompilationError {
     }
  };
 
+ class UnexpectedSymbolError extends SemanticError {
+    constructor(symbol, ctx) {
+        super(`Unexpected symbol "${symbol}" detected.`, ctx);
+        Error.captureStackTrace(this, UnexpectedSymbolError);
+    }
+}
+
 /* Variable not defined error */
 class VariableNotDefinedError extends SemanticError {
-    constructor(ctx, variableNode) {
-        super(`The variable ${variableNode.getText()} has not been defined.`, ctx, variableNode);
+    constructor(variableName, ctx) {
+        super(`The variable ${variableName} has not been defined.`, ctx);
+        Error.captureStackTrace(this, VariableNotDefinedError);
     }
 }
  
 /* Variable already been defined error */
 class VariableAlreadyDefinedError extends SemanticError {
-    constructor(ctx, variableNode) {
-        super(`The variable ${variableNode.getText()} has already been defined.`, ctx, variableNode);
+    constructor(variableName, ctx) {
+        super(`The variable ${variableName} has already been defined.`, ctx);
+        Error.captureStackTrace(this, VariableAlreadyDefinedError);
     }
 }
 
 /* Variable already been defined error */
 class ArithmeticOperationError extends SemanticError {
-    constructor(ctx, lparam, op, rparam) {
-        const { arithmeticOperationToString, symbolToTypeName } = require('../utils/TypesResolver');
-        super(`Operator ${arithmeticOperationToString(op)} can not be applied on ${symbolToTypeName(lparam.type)} (lparam) and ${symbolToTypeName(rparam.type)} (rparam).`, ctx);
+    constructor(lparam, op, rparam, ctx) {
+        const TypeRegistar = require('../types');
+        super(`Operator ${TypeRegistar.getArithmeticOperationString(op)} can not be applied on ${lparam.type.name} (lparam) and ${rparam.type.name} (rparam).`, ctx);
+
+        Error.captureStackTrace(this, ArithmeticOperationError);
     }
 }
 
@@ -272,6 +307,7 @@ class ArithmeticOperationError extends SemanticError {
 class DivisionByZeroError extends SemanticError {
     constructor(ctx) {
         super(`A divisin by zero can't be performed.`, ctx);
+        Error.captureStackTrace(this, DivisionByZeroError);
     }
 }
 
@@ -279,18 +315,21 @@ class InvalidCastError extends SemanticError {
     constructor(ctx, from, to) {
         const symbolToTypeName = require('../utils/TypesResolver').symbolToTypeName;
         super(`Can not perform a cast from ${symbolToTypeName(from)} to ${symbolToTypeName(to)}.`, ctx);
+        Error.captureStackTrace(this, InvalidCastError);
     }
 }
 
 class FormatError extends SemanticError {
     constructor(ctx, message) {
         super(message, ctx);
+        Error.captureStackTrace(this, FormatError);
     }
 }
 
 class StackOverflowError extends SemanticError {
     constructor(ctx) {
         super('Maximum call stack size exceeded', ctx);
+        Error.captureStackTrace(this, StackOverflowError);
     }
 }
 
@@ -300,14 +339,16 @@ class StackOverflowError extends SemanticError {
  * https://www.youtube.com/watch?v=wrCUQuJsDYI ᕙ[ ˵ ͡’ ω ͡’ ˵ ]ᕗ
  *****************************************************************************/
 
- module.exports = {
-     SyntaxError,
-     SemanticError,
-     VariableNotDefinedError,
-     VariableAlreadyDefinedError,
-     ArithmeticOperationError,
-     DivisionByZeroError,
-     InvalidCastError,
-     FormatError,
-     StackOverflowError
- };
+//ambiguous
+module.exports = {
+    SyntaxError,
+    SemanticError,
+    UnexpectedSymbolError,
+    VariableNotDefinedError,
+    VariableAlreadyDefinedError,
+    ArithmeticOperationError,
+    DivisionByZeroError,
+    InvalidCastError,
+    FormatError,
+    StackOverflowError
+};

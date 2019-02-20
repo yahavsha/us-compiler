@@ -6,16 +6,16 @@ grammar us;
 
 /****************** General ******************/
 program
-   : START_PROGRAM meanie_instruction? global_scope? END_PROGRAM
+   : START_PROGRAM meanie_instruction? scope? END_PROGRAM
    ;
 
 meanie_instruction:
     ASSIGNMENT MEANIE_PROGRAM
     ;
 
-global_scope
-   : function_decl* scope
-   ;
+// global_scope
+//    : function_decl* scope
+//    ;
    
 scope
    : statement+
@@ -23,6 +23,7 @@ scope
    
 statement
    : comment
+   | function_decl
    | declaration
    | condition_block
    | expression
@@ -39,7 +40,7 @@ comment
 /****************** Variables decl ******************/
 declaration
    : VAR_DECL LABEL
-   | VAR_DECL_ASSGN? assignment_expression
+   | VAR_DECL_ASSGN assignment_expression
    ;
 
 /****************** Expressions ******************/

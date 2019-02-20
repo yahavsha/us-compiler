@@ -14,12 +14,11 @@
 
  /* External Libraries */
 const antlr4 = require('antlr4');
-const Lexer = require("../ast/usLexer");
-const Parser = require("../ast/usParser");
+const Lexer = require("../lib/usLexer");
+const Parser = require("../lib/usParser");
 
 /* Helpers */
 const InterperterOptions = require('./InterperterOptions');
-const { createUSValue } = require('../utils/TypesResolver');
 
 /* Error Handler */
 const ExceptionsBasedErrorListener = require('./ExceptionsBasedErrorListener');
@@ -58,7 +57,7 @@ module.exports = class Interperter {
 
     setGlobalVariable(name, value) {
         /* Convert the variable into a value node */
-        this.globalVariables[name] = createUSValue(value);
+        // this.globalVariables[name] = createUSValue(value);
     }
 
     addErrorListener(listener) {
@@ -92,7 +91,7 @@ module.exports = class Interperter {
         const parser = this.createParser(tokens);
 
         /* Creates an AST */
-        const ast = parser.program();
+        const cst = parser.program();
 
         /* If there're syntax error(s), stop here */
         if (parser._syntaxErrors > 0) {
@@ -100,11 +99,17 @@ module.exports = class Interperter {
         }
 
         /* Evaluate the code by using our evaluation visitors */
-        const EvaluatorVisitor = require('./EvaluatorVisitor');
-        const evaluator = new EvaluatorVisitor(this.options, this.globalVariables);
+        const ParseTreeToASTVisitor = require('../ast/ParseTreeToASTVisitor');
+        const cstVisitor = new ParseTreeToASTVisitor(this.options, this.globalVariables);
+        const ast = cstVisitor.start(cst);
 
-        /* Create the AST Evaluation Node */
-        const evaluationResult = evaluator.start(ast);
+        // console.log(ast);
+        // process.exit(0);
+
+        /* Evaluates the tree */
+        const EvaluationASTVisitor = require('../evaluation/EvaluationASTVisitor');
+        const evaluator = new EvaluationASTVisitor();
+        evaluator.visitProgram(ast);
     }
 
     /**************** Private Methods *****************/
