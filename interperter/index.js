@@ -8,6 +8,8 @@
  * @author Yahav S.
  */
 
+__US_VERSION = '0.1b';
+
 /*****************************************************************************
  *  Load required libraries
  *****************************************************************************/
@@ -44,7 +46,15 @@ module.exports = class Interperter {
         this.globalVariables = {};
         this.options = new InterperterOptions();
 
-        this.setGlobalVariable('__VERSION__', '0.1');
+        this.setGlobalVariable('__VERSION__', __US_VERSION);
+    }
+
+    /**
+     * Gets the US compiler version.
+     * @return {String}
+     */
+    static getVersion() {
+        return __US_VERSION;
     }
     
     /**

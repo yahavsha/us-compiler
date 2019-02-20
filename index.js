@@ -6,8 +6,15 @@ let input = `
 hey
     is meanie
     
-    sup sum
-    sum is 1 + 2
+    sup a
+    sup b
+    a is 1
+    b is ++a + 1
+
+    sup c
+    sup d
+    c is 1
+    d is c++ + 1
 
     BARRIER! 
     sum is sum + 1
@@ -71,7 +78,7 @@ try {
     const interperter = new Interperter();
     interperter.interpert(input);
 } catch (e) {
-    throw e;
+    // throw e;
     try {
     console.error('\n\n** Error Was Thrown **');
     console.error(e.message);

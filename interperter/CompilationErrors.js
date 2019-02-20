@@ -296,8 +296,8 @@ class VariableAlreadyDefinedError extends SemanticError {
 /* Variable already been defined error */
 class ArithmeticOperationError extends SemanticError {
     constructor(lparam, op, rparam, ctx) {
-        const TypeRegistar = require('../types');
-        super(`Operator ${TypeRegistar.getArithmeticOperationString(op)} can not be applied on ${lparam.type.name} (lparam) and ${rparam.type.name} (rparam).`, ctx);
+        const { TypesRegistar } = require('../types');
+        super(`Operator ${TypesRegistar.getArithmeticOperationString(op)} can not be applied on ${lparam.type.name} (lparam) and ${rparam.type.name} (rparam).`, ctx);
 
         Error.captureStackTrace(this, ArithmeticOperationError);
     }
@@ -312,9 +312,8 @@ class DivisionByZeroError extends SemanticError {
 }
 
 class InvalidCastError extends SemanticError {
-    constructor(ctx, from, to) {
-        const symbolToTypeName = require('../utils/TypesResolver').symbolToTypeName;
-        super(`Can not perform a cast from ${symbolToTypeName(from)} to ${symbolToTypeName(to)}.`, ctx);
+    constructor(from, to, ctx) {
+        super(`Can not perform a cast from ${from.name} to ${to.name}.`, ctx);
         Error.captureStackTrace(this, InvalidCastError);
     }
 }
@@ -341,6 +340,7 @@ class StackOverflowError extends SemanticError {
 
 //ambiguous
 module.exports = {
+    CompilationError,
     SyntaxError,
     SemanticError,
     UnexpectedSymbolError,

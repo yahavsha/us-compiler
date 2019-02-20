@@ -4,7 +4,7 @@
  *****************************************************************************/
 
 const { ASTNodeType, ASTNode } = require('./Node');
-const TypeRegistar = require('../../types');
+const { TypesRegistar } = require('../../types');
 
 /*****************************************************************************
  * Define the node
@@ -27,7 +27,7 @@ module.exports = class UnaryOperationNode extends ASTNode {
             throw new Error("UnaryOperationNode expects lparam and rparam to be ASTNode.");
         }
 
-        if (!TypeRegistar.isValidUnaryOperation(op)) {
+        if (!TypesRegistar.isValidUnaryOperation(op)) {
             throw new Error("The given unary operator symbol is invalid.");
         }
 
@@ -55,6 +55,6 @@ module.exports = class UnaryOperationNode extends ASTNode {
      * Gets a description of this node.
      */
     toString() {
-        return `UnaryOperationNode { this.op = ${TypeRegistar.getUnaryOperationString(this.op)}, param = ${this.param} }`;
+        return `UnaryOperationNode { this.op = ${TypesRegistar.getUnaryOperationString(this.op)}, param = ${this.param} }`;
     }
 }

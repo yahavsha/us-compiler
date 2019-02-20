@@ -12,6 +12,7 @@
 const Parser = require('../lib/usParser').usParser;
 const literalNames = new Parser().literalNames;
 const {
+    InvalidCastError,
     ArithmeticOperationError,
     DivisionByZeroError,
     FormatError
@@ -122,12 +123,11 @@ class PrimitiveType extends Type {
 
     /**
      * Attempts to cast the given value into this type.
-     * @param {*} value The value.
-     * @param {Type} fromType The origin type.
+     * @param {TypeValue} value The value.
      * @return The casted value, or undefined if the cast can not be performed.
      */
-    cast(value, fromType) {
-        return undefined;
+    cast(value) {
+        throw new InvalidCastError(value.type.name, this.name);
     }
 
     /**
@@ -167,7 +167,7 @@ class PrimitiveType extends Type {
     }
 
     /**
-     * Perform an arithmetic operation between two values.
+     * Perform an arithmetic operation between the given two values.
      * @param {TypeValue} lparam The left hand value.
      * @param {TypeValue} op The operator symbol.
      * @param {TypeValue} rparam The right hand operator.
@@ -175,25 +175,25 @@ class PrimitiveType extends Type {
     static performArithmeticOperation(lparam, op, rparam) {
         /* If both types are numbers, it's simple mathematical expression */
         if ((lparam.type instanceof NumberType) && (rparam.type instanceof NumberType)) {
-            return NumberType.performArithmeticOperation(lparam, op, rparam);
+            return ArithmeticUtils.applyNumberAndNumber(lparam, op, rparam);
         }
 
         /* Handle strings */
         if ((lparam.type instanceof WordsType) && (rparam.type instanceof WordsType)) {
-            
+            return ArithmeticUtils.applyStringAndString(lparam, op, rparam);
         }
 
         
         /* Handle String & Number operations */
         if (lparam.type instanceof NumberType) {
             if (rparam.type instanceof WordsType) {
-
+                return ArithmeticUtils._applyStringAndNumber(lparam, op, rparam);
             }
         } 
 
         if (rparam.type instanceof NumberType) {
             if (lparam.type instanceof WordsType) {
-                
+                return ArithmeticUtils._applyStringAndNumber(lparam, op, rparam);
             }
         } 
 
@@ -244,52 +244,18 @@ class PrimitiveType extends Type {
 
     /**
      * Attempts to cast the given value into this type.
-     * @param {*} value The value.
-     * @param {Type} fromType The origin type.
+     * @param {TypeValue} value The value.
      * @return The casted value, or undefined if the cast can not be performed.
      */
-    cast(value, fromType) {
-        return undefined;
-    }
-
-    /***** Static Helpers ******/
-
-    /**
-     * Perform an arithmetic operation between the two given number values.
-     * @param {TypeValue} lparam The left hand value.
-     * @param {TypeValue} op The operator symbol.
-     * @param {TypeValue} rparam The right hand operator.
-     */
-    static performArithmeticOperation(lparam, op, rparam) {
-        let value;
-        switch (op) {
-            case Parser.PLUS:
-                value = lparam.value + rparam.value;
-                break;
-            case Parser.MINUS:
-                value = lparam.value - rparam.value;
-                break;
-            case Parser.MULTIPLY:
-                value = lparam.value * rparam.value;
-                break;
-            case Parser.DIVIDE:
-                if (rparam.value === 0) {
-                    throw new DivisionByZeroError();
-                }
-
-                value = lparam.value / rparam.value;
-                break;
-            case Parser.MOD:
-                value = lparam.value % rparam.value;
-                break;
-            case Parser.POWER:
-                value = Math.pow(lparam.value, rparam.value);
-                break;
-            default:
-                throw new Error("Could not resolve the arithmetic operation.");
+    cast(value) {
+        let numberedValue = Number(value.value);
+    
+        if (isNaN(numberedValue)) {
+            throw new FormatError(
+                `Could not cast ${node.value} into a ${this.name}. The given value format is incorrect.`);
         }
-
-        return new TypeValue(lparam.type, value); // Why lparam.type? Just casue I decided too! We could've used the instance in rparam.type as well. It's singleton. It's the same. Duh.
+    
+        return new TypeValue(NumberType.getInstance(), value);
     }
 }
 
@@ -332,12 +298,11 @@ class WordsType extends Type {
 
     /**
      * Attempts to cast the given value into this type.
-     * @param {*} value The value.
-     * @param {Type} fromType The origin type.
+     * @param {TypeValue} value The value.
      * @return The casted value, or undefined if the cast can not be performed.
      */
-    cast(value, fromType) {
-        return undefined;
+    cast(value) {
+        return new TypeValue(WordsType.getInstance(), value.value.toString());
     }
 
     /**
@@ -390,12 +355,11 @@ class AnswerType extends Type {
 
     /**
      * Attempts to cast the given value into this type.
-     * @param {*} value The value.
-     * @param {Type} fromType The origin type.
+     * @param {TypeValue} value The value.
      * @return The casted value, or undefined if the cast can not be performed.
      */
-    cast(value, fromType) {
-        return undefined;
+    cast(value) {
+        return new TypeValue(AnswerType.getInstance(), Boolean(value.value));
     }
 }
  
@@ -468,6 +432,98 @@ PrimitiveType.prototype.PrimitivesMap[Parser.STRING] = WordsType.getInstance();
 PrimitiveType.prototype.PrimitivesMap[Parser.TRUE] = AnswerType.getInstance();
 PrimitiveType.prototype.PrimitivesMap[Parser.FALSE] = AnswerType.getInstance();
 PrimitiveType.prototype.PrimitivesMap[Parser.NULL] = NullType.getInstance();
+
+/*****************************************************************************
+ * An arithmetic utilities class
+ *****************************************************************************/
+
+
+class ArithmeticUtils {
+    /**
+     * Perform an arithmetic operation between the two given number values.
+     * @param {TypeValue} lparam The left hand value.
+     * @param {TypeValue} op The operator symbol.
+     * @param {TypeValue} rparam The right hand operator.
+     */
+    static applyNumberAndNumber(lparam, op, rparam) {
+        let value;
+        switch (op) {
+            case Parser.PLUS:
+                value = lparam.value + rparam.value;
+                break;
+            case Parser.MINUS:
+                value = lparam.value - rparam.value;
+                break;
+            case Parser.MULTIPLY:
+                value = lparam.value * rparam.value;
+                break;
+            case Parser.DIVIDE:
+                if (rparam.value === 0) {
+                    throw new DivisionByZeroError();
+                }
+
+                value = lparam.value / rparam.value;
+                break;
+            case Parser.MOD:
+                value = lparam.value % rparam.value;
+                break;
+            case Parser.POWER:
+                value = Math.pow(lparam.value, rparam.value);
+                break;
+            default:
+                throw new Error("Could not resolve the arithmetic operation.");
+        }
+
+        return new TypeValue(lparam.type, value); // Why lparam.type? Just casue I decided too! We could've used the instance in rparam.type as well. It's singleton. It's the same. Duh.
+    }
+
+    /**
+     * Perform an arithmetic operation between the two given word values.
+     * @param {TypeValue} lparam The left hand value.
+     * @param {TypeValue} op The operator symbol.
+     * @param {TypeValue} rparam The right hand operator.
+     */
+    static applyStringAndString(lparam, op, rparam) {
+        /* With both strings, we only support operator+ and operator-. */
+        if (op === Parser.PLUS) {
+            return new TypeValue(lparam.type, lparam.value + rparam.value);
+        } else if (op === Parser.MINUS) {
+            return new TypeValue(lparam.type, lparam.value.replace(rparam.value, ''));
+        }
+
+        throw new ArithmeticOperationError(lparam, op, rparam);
+    }
+
+    /**
+     * Perform an arithmetic operation between the given string and number.
+     * @param {TypeValue} lparam The left hand value.
+     * @param {TypeValue} op The operator symbol.
+     * @param {TypeValue} rparam The right hand operator.
+     */
+    static _applyStringAndNumber(lparam, op, rparam) {
+        /* What is the operation? */
+        switch (op) {
+            case Parser.PLUS:
+                /* If it's a plus, we'll cast the number into a string and concat them.
+                Note that we could've use a casting (WordsType.getInstance().cast(lparam) etc. but that'd
+                create extra TypeValue instance when we can just toString() it. */
+                return new TypeValue(WordsType.getInstance(), lparam.value.toString() + rparam.value.toString());
+            case Parser.MULTIPLY:
+                /* Who's the string and who's the number? */
+                let strParam = lparam.type instanceof WordsType ? lparam : rparam;
+                let numParam = lparam.type instanceof NumberType ? lparam : rparam;
+
+                return new TypeValue(WordsType.getInstance(), strParam.value.repeat(numParam.value));
+            case Parser.MINUS:
+            case Parser.DIVIDE:
+            case Parser.MOD:
+            case Parser.POWER:
+                throw new ArithmeticOperationError(lparam, op, rparam);
+            default:
+                throw new Error("Could not resolve the arithmetic operation.");
+        }
+    }
+}
 
 /*****************************************************************************
  * Define the Type Registar (tracker) class

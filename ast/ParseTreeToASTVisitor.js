@@ -20,8 +20,7 @@ const {
 } = require('./nodes');
  
 /* Helpers */
-const TypeRegistar = require('../types');
-const { PrimitiveType } = require('../types');
+const { TypesRegistar, PrimitiveType } = require('../types');
 
 /*
  * For more information and examples, read:
@@ -103,8 +102,8 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
         if (PrimitiveType.isPrimitiveTypeSymbol(symbolType)
             //|| isComparatorSymbol(symbolType)
             //|| isLogicalOperatorSymbol(symbolType)
-            || TypeRegistar.isValidArithmeticOperation(symbolType)
-            || TypeRegistar.isValidUnaryOperation(symbolType)) {
+            || TypesRegistar.isValidArithmeticOperation(symbolType)
+            || TypesRegistar.isValidUnaryOperation(symbolType)) {
             return symbolType;
         }
 

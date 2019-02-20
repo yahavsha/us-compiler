@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const debug = require('debug')('us:evaluation');
 const ASTVisitor = require('../ast/ASTVisitor');
+const Parser = require('../lib/usParser').usParser;
 const EvaluationResult = require('./EvaluationResult');
 
 /* Compilation Errors */
@@ -33,7 +34,7 @@ const {
 } = require('./symbols');
 
 /* Misc */
-const { TypesRegistar, TypeValue } = require('../types');
+const { TypesRegistar, TypeValue, NumberType } = require('../types');
 const Stack = require('../utils/Stack');
 
 /*****************************************************************************
@@ -65,8 +66,10 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         console.log('');
         console.log('');
 
-        this._callStack.push('main()'); // Add the main to the call stack.
-        node.globalScope.accept(this);
+        if (node.globalScope) {
+            this._callStack.push('main()'); // Add the main to the call stack.
+            node.globalScope.accept(this);
+        }
 
         console.log('');
         console.log('');
@@ -133,14 +136,15 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      * @see AssignmentNode.accept(ASTVisitor visitor)
      */
     visitAssignment(node) {
-        debug(`visitAssignment: assigning ${node.lparam} to ${node.rparam}`);
         /* Get the symbol and the actual value to store there */
         let lparam = node.lparam.accept(this);
         let rparam = node.rparam.accept(this);
 
+        debug(`visitAssignment: assigning ${lparam} = ${rparam}`);
+
         /* Assign the lparam to the rparam */
         if ((lparam instanceof VariableSymbol)) {
-            lparam.value = rparam;
+            this._updateSymbolTable(lparam, rparam);
         } else {
             throw 'visitAssignment: lparam isnt variable';
         }
@@ -172,23 +176,15 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         /* Perfomr the computation. Note that it might throw a semantic error */
         try {
             let result = TypesRegistar.performArithmeticOperation(lparam, node.op, rparam);
-            console.log(`
-            visitArithmeticOperation:
-                node: ${node}
-                lparam: ${lparam}
-                op: ${node.op}
-                rparam: ${rparam}
-                result: ${result}
-            `);
+            return result;
         } catch (e) {
             /* We didnt pass a context to this method but the SemanticError Classes demands it. To get around it w/o
             requiring a context in every arithmetic method, we've thrown the exceptions with empty object.
             Thus, we'll put here the context */
-            // node.context.stackTrace = this._callStack;
-            // e.setContext(node.context);
+            node.context.stackTrace = this._callStack;
+            e.setContext(node.context);
             throw e;
         }
-        process.exit(0);
     }
 
     /**
@@ -198,6 +194,43 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      */
     visitUnaryOperation(node) {
         debug('visitUnaryOperation');
+        
+        /* When we deal with unary operations, we have to perform them first and only then
+           forward the call.
+           
+           A little note: Unary V. Postfix -
+                Unary
+                ```java
+                    int a = 1;
+                    int b = ++a + 1;
+                    System.out.println("a: " + a + ", b " + b);
+                ```
+                Prints: "a = 2, b = 3"
+
+                Postfix
+                ```java
+                    int a = 1;
+                    int b = a++ + 1;
+                    System.out.println("a: " + a + ", b " + b);
+                ```
+                Prints: "a = 2, b = 2"
+           */
+        let param = node.param.accept(this);
+
+        if (!(param instanceof VariableSymbol)) {
+            throw new UnexpectedSymbolError(TypesRegistar.getUnaryOperationString(node.op), node.context);
+        }
+
+        /* Get the updated value */
+        let value = TypesRegistar.performArithmeticOperation(param.value,
+            node.op === Parser.UNARY_PLUS ? Parser.PLUS : Parser.MINUS,
+            new TypeValue(NumberType.getInstance(), 1));
+        
+        /* Update the symbol table */
+        this._updateSymbolTable(param, value);
+
+        /* And return it */
+        return param.value;
     }
 
     /**
@@ -207,6 +240,26 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      */
     visitPostfixOperation(node) {
         debug('visitPostfixOperation');
+        /* In postfix operators, we perform the arithmetic expression only after we evaluate the expression */
+        let param = node.param.accept(this);
+
+        if (!(param instanceof VariableSymbol)) {
+            throw new UnexpectedSymbolError(TypesRegistar.getUnaryOperationString(node.op), node.context);
+        }
+
+        /* Save the value before the changes (as we shouldn't use the new value for the rest of the expression) */
+        let temp = param.value; // << That'll make it postfix. and that's why unary is better in performance. See? See?
+        
+        /* Get the updated value */
+        let value = TypesRegistar.performArithmeticOperation(param.value,
+            node.op === Parser.UNARY_PLUS ? Parser.PLUS : Parser.MINUS,
+            new TypeValue(NumberType.getInstance(), 1));
+        
+        /* Update the symbol table */
+        this._updateSymbolTable(param, value);
+
+        /* And return it */
+        return temp;
     }
 
     /**
@@ -225,14 +278,24 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      * Searchs for the given variable name in the symbols table.
      * @param {EvaluationContext} context The evaluation context.
      * @param {string} name The variable name.
+     * @return {VariableSymbol}
      */
     _variableLookup(context, name) {
         let symbol = this._symbolsTable.find(name);
         if (symbol === null) {
+            debug(`Could not find the symbol ${name} in the symbols table.`);
             // If we're in meanie mode, we won't allow to use a variable before it was declared
             if (this._isMeanie) {
-                node.context.stackTrace = this._callStack;
+                context.stackTrace = this._callStack;
                 throw new VariableNotDefinedError(name, context);
+            } else {
+                // Otherwise we'll define this variable right... now!
+                symbol = SymbolFactory({
+                    type: SymbolType.VARIABLE,
+                    args: [node.name]
+                });
+                this._symbolsTable.add(node.name, symbol);
+                return symbol; // We have return later, but I wanna skip on the type check (the instanceof thingy).
             }
         }
 
@@ -249,17 +312,46 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      * @param {ASTNode} node The ast node.
      */
     _getValue(node) {
-        if ((node instanceof ValueNode)) {
+        /* Is it the value? lol. We can get here with a value by recursion */
+        if (node instanceof TypeValue) {
+            return node;
+        }
+
+        /* Is it an AST ValueNode? */
+        if (node instanceof ValueNode) {
             // Easy, just convert it into Z. That was a literal in the code itself (like in "sum is sum * 2", then 2 is ValueNode)
             return TypeValue.fromNode(node);
         }
         
-        if ((node instanceof VariableReferenceNode)) {
+        /* Is it a variable reference? */
+        if (node instanceof VariableReferenceNode) {
             /* Attempt to find that variable in the symbols table */
-            let symbol = this._variableLookup(node.context, node.value);
+            let symbol = this._variableLookup(node.context, node.name);
             return symbol.value;
+        } else if (node instanceof ASTNode) {
+            /* This is a nested node, so lets parse it */
+            return this._getValue(node.accept(this));
+        }
+
+        /* Is it a symbol? */
+        if (node instanceof VariableSymbol) {
+            return node.value;
         }
 
         throw '_getValue dk how to resolve this node ' + node.toString();
+    }
+
+    /**
+     * Update the symbol table with a new value.
+     * @param {Symbol} symbol 
+     * @param {Symbol} newValue 
+     */
+    _updateSymbolTable(symbol, newValue) {
+        if (!(symbol instanceof VariableSymbol)) {
+            throw new Error('_updateSymbolTable expects to get a Symbol.');
+        }
+
+        symbol.value = this._getValue(newValue);
+        this._symbolsTable.set(symbol.name, symbol);
     }
 };
