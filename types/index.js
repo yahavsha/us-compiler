@@ -255,13 +255,33 @@ class PrimitiveType extends Type {
      * @return {*}
      */
     createValue(value) {
-        let v = Number(value);
+        let v = this._resolveNumber(value);
         if (isNaN(v)) {
             throw new Error('Could not convert the given value into a Number.');
         }
 
         return v;
     }
+
+    /**
+     * Resolves a numeric string.
+     * @param {string} value 
+     */
+     _resolveNumber(value) {
+        /* A number might have a "k" or "m" at the end */
+        if (value.length > 1) {
+            if (value[value.length - 1] == 'k') {
+                const realNumber = Number(value.substring(0, value.length - 1));
+                return realNumber * 1000;
+            } else if (value[value.length - 1] == 'm') {
+                const realNumber = Number(value.substring(0, value.length - 1));
+                return realNumber * 1000000 ;
+            }
+        }
+
+        return Number(value);
+    }
+
 
     /**
      * Gets the single instance of this class (singleton pattern).

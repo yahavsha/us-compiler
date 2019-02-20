@@ -6,7 +6,7 @@ let input = `
 hey
     is meanie
     
-    woah foo is 2
+    woah foo is 2k
     woah a is yupyup or nop
     
     BARRIER! 
