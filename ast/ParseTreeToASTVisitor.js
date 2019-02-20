@@ -16,11 +16,17 @@ const {
     ASTNode,
     ASTNodeType,
     NodeFactory,
-    ScopeNode
+    ScopeNode,
+    VariableReferenceNode
 } = require('./nodes');
  
 /* Helpers */
 const { TypesRegistar, PrimitiveType } = require('../types');
+
+/* Errors */
+const {
+    UnexpectedSymbolError
+} = require('../interperter/CompilationErrors');
 
 /*
  * For more information and examples, read:
@@ -213,7 +219,20 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
                 args: [ /* name: */ ctx.getChild(1).getText() ]
             });
         } else {
+            /* Get the expr */
+            let expr = ctx.getChild(1).accept(this);
 
+            /* The lparam should be a the variable */
+            if (!(expr.lparam instanceof VariableReferenceNode)) {
+                const context = this._createContext(ctx);
+                throw new UnexpectedSymbolError(this._getNodeFullText(context), context);
+            }
+
+            return NodeFactory({
+                ctx: this._createContext(ctx),
+                type: ASTNodeType.VARIABLEDECLARATION,
+                args: [ /* name: */ expr.lparam.name, expr.rparam ]
+            });
         }
     }
 
@@ -574,6 +593,16 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
         }
 
         return context;
+    }
+
+    /**
+     * Get the full padded text used in a given ctx.
+     * @param {ParsingContext} ctx 
+     */
+    _getNodeFullText(ctx) {
+        const context = (ctx instanceof ASTContext) ? ctx : this._createContext(ctx);
+        const line = this.codeLines[context.line - 1];
+        return line.substring(context.column, context.stop);
     }
 
     /**

@@ -6,16 +6,8 @@ let input = `
 hey
     is meanie
     
-    sup a
-    sup b
-    a is 1
-    b is ++a + 1
-
-    sup c
-    sup d
-    c is 1
-    d is c++ + 1
-
+    woah a is 1
+    
     BARRIER! 
     sum is sum + 1
 

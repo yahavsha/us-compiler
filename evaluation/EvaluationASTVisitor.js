@@ -124,10 +124,20 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         }
 
         /* Declare it */
-        this._symbolsTable.add(node.name, SymbolFactory({
-            type: SymbolType.VARIABLE,
-            args: [node.name]
-        }));
+        if (node.value) {
+            /* With value */
+            let value = node.value.accept(this);
+            this._symbolsTable.add(node.name, SymbolFactory({
+                type: SymbolType.VARIABLE,
+                args: [node.name, value]
+            }));
+        } else {
+            /* W/O value */
+            this._symbolsTable.add(node.name, SymbolFactory({
+                type: SymbolType.VARIABLE,
+                args: [node.name]
+            }));
+        }
     }
 
     /**

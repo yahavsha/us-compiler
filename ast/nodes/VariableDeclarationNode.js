@@ -17,11 +17,13 @@ module.exports = class VariableDeclarationNode extends ASTNode {
      * Instantiate a new node instance.
      * @param {ParsingContext} ctx The parsing context.
      * @param {string} name The variable name.
+     * @param {string} initialValue The variable initial value.
      */
-    constructor(ctx, name) {
+    constructor(ctx, name, initialValue) {
         super(ctx);
 
         this.name = name;
+        this.value = initialValue;
     }
 
     /**
@@ -44,6 +46,6 @@ module.exports = class VariableDeclarationNode extends ASTNode {
      * Gets a description of this node.
      */
     toString() {
-        return `VariableDeclarationNode { name = "${this.name}" }`;
+        return `VariableDeclarationNode { name = "${this.name}", initialValue = "${this.value}" }`;
     }
 }
