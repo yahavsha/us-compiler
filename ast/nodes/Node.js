@@ -12,6 +12,9 @@ module.exports.ASTNodeType = {
     UNARYOPERATION:                        6,
     POSTFIXOPERATION:                        7,
     VARIABLEREFERENCE:                        8,
+    CONDITION:                        9,
+    CASTING:                        10,
+    CONDITIONALEXPRESSION:                        11,
 };
 
 /**

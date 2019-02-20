@@ -270,9 +270,16 @@ class SyntaxError extends CompilationError {
     }
  };
 
- class UnexpectedSymbolError extends SemanticError {
+class UnexpectedSymbolError extends SemanticError {
     constructor(symbol, ctx) {
         super(`Unexpected symbol "${symbol}" detected.`, ctx);
+        Error.captureStackTrace(this, UnexpectedSymbolError);
+    }
+}
+
+class InvalidOperationError extends SemanticError {
+    constructor(message, ctx) {
+        super(message, ctx);
         Error.captureStackTrace(this, UnexpectedSymbolError);
     }
 }
@@ -319,7 +326,7 @@ class InvalidCastError extends SemanticError {
 }
 
 class FormatError extends SemanticError {
-    constructor(ctx, message) {
+    constructor(message, ctx) {
         super(message, ctx);
         Error.captureStackTrace(this, FormatError);
     }
@@ -346,6 +353,7 @@ module.exports = {
     UnexpectedSymbolError,
     VariableNotDefinedError,
     VariableAlreadyDefinedError,
+    InvalidOperationError,
     ArithmeticOperationError,
     DivisionByZeroError,
     InvalidCastError,

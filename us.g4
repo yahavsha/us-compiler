@@ -131,8 +131,9 @@ power_expression
     ;
     
 cast_expression
-    :   unary_expression
-    |   VAR_CAST cast_expression VAR_CAST_TO type_specifiers
+    :   VAR_CAST cast_expression VAR_CAST_TO type_specifiers
+    |   LPAREN VAR_CAST cast_expression VAR_CAST_TO type_specifiers RPAREN
+    |   unary_expression
     ;
 
 unary_expression

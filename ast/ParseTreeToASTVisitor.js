@@ -21,7 +21,7 @@ const {
 } = require('./nodes');
  
 /* Helpers */
-const { TypesRegistar, PrimitiveType } = require('../types');
+const { TypesRegistar, PrimitiveType, AnswerType } = require('../types');
 
 /* Errors */
 const {
@@ -85,6 +85,24 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
         let symbolType = ctx.getSymbol().type;
         debug("Teminal Node: " + ctx.getText() + " (type: " + symbolType + ")");
         
+        /* Null */
+        if (symbolType === Parser.NULL) {
+            return NodeFactory({
+                ctx: this._createContext(ctx),
+                type: ASTNodeType.VALUE,
+                args: []
+            });
+        }
+
+        /* If it's true or false, we can handle it quickly and we can't handle it with the general case */
+        if (symbolType === Parser.TRUE || symbolType === Parser.FALSE) {
+            return NodeFactory({
+                ctx: this._createContext(ctx),
+                type: ASTNodeType.VALUE,
+                args: [ctx.getSymbol().type, symbolType === Parser.TRUE]
+            });
+        }
+
         /* Is this an actual value (actual string, numbers etc.) ? */
         if (PrimitiveType.isPrimitiveValueSymbol(symbolType)) {
             return NodeFactory({
@@ -95,7 +113,7 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
         }
 
         /* Is this a variable? */
-        if (ctx.getSymbol().type == Parser.LABEL) {
+        if (symbolType == Parser.LABEL) {
             return NodeFactory({
                 ctx: this._createContext(ctx),
                 type: ASTNodeType.VARIABLEREFERENCE,
@@ -106,8 +124,8 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
         /* If this is a type literal, logical operator or comparator operator, we should just
         return their symbol type (the number in the Parser) */
         if (PrimitiveType.isPrimitiveTypeSymbol(symbolType)
-            //|| isComparatorSymbol(symbolType)
-            //|| isLogicalOperatorSymbol(symbolType)
+            || AnswerType.getInstance().isComparatorSymbol(symbolType)
+            || AnswerType.getInstance().isLogicalOperatorSymbol(symbolType)
             || TypesRegistar.isValidArithmeticOperation(symbolType)
             || TypesRegistar.isValidUnaryOperation(symbolType)) {
             return symbolType;
@@ -324,7 +342,6 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
      * </code>
      */
     visitLogical_or_expression(ctx) {
-        return ctx.getChild(0).accept(this);
         return this._handleChainedConditionExpression(ctx);
     }
 
@@ -341,7 +358,6 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
      * </code>
      */
     visitLogical_and_expression(ctx) {
-        return ctx.getChild(0).accept(this);
         return this._handleChainedConditionExpression(ctx);
     }
 
@@ -359,7 +375,6 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
      * </code>
      */
     visitEquality_expression(ctx) {
-        return ctx.getChild(0).accept(this);
         return this._handleSingleConditionExpression(ctx);
     }
 
@@ -379,7 +394,6 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
      * </code>
      */
     visitRelational_expression(ctx) {
-        return ctx.getChild(0).accept(this);
         return this._handleSingleConditionExpression(ctx);
     }
 
@@ -447,21 +461,23 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
      * </code>
      */
     visitCast_expression(ctx) {
-        return ctx.getChild(0).accept(this);
-
         /* Forward? */
         if (ctx.children.length === 1) {
             return ctx.getChild(0).accept(this);
-        }        
+        }
+
+        /* We might have parentesis that takes another 1 space, so we need to skip on them */
+        let expr = !this._isSymbol(ctx.getChild(1)) ? ctx.getChild(1) : ctx.getChild(2);
+        let typeSpecifier = !this._isSymbol(ctx.getChild(3)) ? ctx.getChild(3) : ctx.getChild(4);
 
         /* Get the casted expression and the type symbol */
-        let expr = ctx.getChild(1).accept(this);
-        let typeSymobl = ctx.getChild(3).accept(this);
-
+        expr = expr.accept(this);
+        typeSpecifier = typeSpecifier.accept(this);
+        
         return NodeFactory({
             ctx: this._createContext(ctx),
-            type: NodeType.CASTING,
-            args: [expr, typeSymobl]
+            type: ASTNodeType.CASTING,
+            args: [expr, TypesRegistar.getFromTypeSymbol(typeSpecifier)]
         });
     }
 
@@ -653,6 +669,58 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
          return ctx.getChild(0).accept(this);
     }
 
+
+
+    /**
+     * Handles a single condition expression.
+     * This function is being used to handle the comparison operators (foo < bar, foo == bar, foo != bar etc.)
+     * @param {ParsingContext} ctx 
+     */
+    _handleSingleConditionExpression(ctx) {
+        /** The idea here is very similiar to _handleArithmeticExpression, so see the explanation there :sweat_smile: */
+        
+        /* Forward the call? */
+        if (ctx.children.length === 1) {
+            return ctx.getChild(0).accept(this);            
+        }
+
+        /* Evaluate the left and right expressions */
+        let lexpr = ctx.getChild(0).accept(this);
+        let op = ctx.getChild(1).accept(this);
+        let rexpr = ctx.getChild(2).accept(this);
+
+        /* And create the actual condition */
+        return NodeFactory({
+            ctx: this._createContext(ctx),
+            type: ASTNodeType.CONDITIONALEXPRESSION,
+            args: [lexpr, op, rexpr]
+        });
+    }
+
+
+    /**
+     * Handles a chained condition expression.
+     * This function is being used to handle the logical operators (a && b, b || c).
+     * @param {ParsingContext} ctx 
+     */
+    _handleChainedConditionExpression(ctx) {
+        /* Forward the call? */
+        if (ctx.children.length === 1) {
+            return ctx.getChild(0).accept(this);            
+        }
+
+        /* Evaluate the left and right expressions */
+        let lexpr = ctx.getChild(0).accept(this);
+        let op = ctx.getChild(1).accept(this);
+        let rexpr = ctx.getChild(2).accept(this);
+    
+        /* And create the actual condition */
+        return NodeFactory({
+            ctx: this._createContext(ctx),
+            type: ASTNodeType.CONDITION,
+            args: [lexpr, op, rexpr]
+        });
+    }
 
     _printChilds(ctx) {
         let i = 0;

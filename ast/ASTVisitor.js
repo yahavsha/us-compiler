@@ -17,6 +17,9 @@ const {
     UnaryOperationNode,
     PostfixOperationNode,
     VariableReferenceNode,
+    ConditionNode,
+    CastingNode,
+    ConditionalExpressionNode,
 } = require('./nodes');
 
 /*****************************************************************************
@@ -106,6 +109,33 @@ module.exports = class ASTVisitor {
      * @see VariableReferenceNode.accept(ASTVisitor visitor)
      */
     visitVariableReference(node) {
+        /* Implementation */
+    }
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link ConditionNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see ConditionNode.accept(ASTVisitor visitor)
+     */
+    visitCondition(node) {
+        /* Implementation */
+    }
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link CastingNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see CastingNode.accept(ASTVisitor visitor)
+     */
+    visitCasting(node) {
+        /* Implementation */
+    }
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link ConditionalExpressionNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see ConditionalExpressionNode.accept(ASTVisitor visitor)
+     */
+    visitConditionalExpression(node) {
         /* Implementation */
     }
 };

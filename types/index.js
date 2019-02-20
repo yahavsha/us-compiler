@@ -18,6 +18,16 @@ const {
     FormatError
 } = require('../interperter/CompilationErrors');
 
+/**
+ * Trim the given characters from the string.
+ * @param {string} c The characters to trim.
+ * @return The trimmed string.
+ */
+function trimChars(str, c) {
+    var re = new RegExp("^[" + c + "]+|[" + c + "]+$", "g");
+    return str.replace(re, "");
+};
+
 /*****************************************************************************
  * Define the Type class
  *****************************************************************************/
@@ -81,6 +91,20 @@ class TypeValue {
      */
     static get Null() {
         return new TypeValue(NullType.getInstance(), null);
+    }
+
+    /**
+     * Gets a true value.
+     */
+    static get True() {
+        return new TypeValue(AnswerType.getInstance(), true);
+    }
+
+    /**
+     * Gets a false value.
+     */
+    static get False() {
+        return new TypeValue(AnswerType.getInstance(), false);
     }
 
     /**
@@ -155,6 +179,15 @@ class PrimitiveType extends Type {
      */
     static findFromSymbol(symbol) {
         return PrimitiveType.prototype.PrimitivesMap[String(symbol)];
+    }
+
+    /**
+     * Gets the primitive type that coresponds with the given type symbol.
+     * @param {Integer} symbol The type symbol.
+     * @return {Type}
+     */
+    static findFromTypeSymbol(symbol) {
+        return PrimitiveType.prototype.PrimitivesTypesMap[String(symbol)];
     }
 
     /**
@@ -252,7 +285,7 @@ class PrimitiveType extends Type {
     
         if (isNaN(numberedValue)) {
             throw new FormatError(
-                `Could not cast ${node.value} into a ${this.name}. The given value format is incorrect.`);
+                `Could not cast ${value.value} into a ${this.name}. The given value format is incorrect.`);
         }
     
         return new TypeValue(NumberType.getInstance(), value);
@@ -281,7 +314,7 @@ class WordsType extends Type {
      * @return {*}
      */
     createValue(value) {
-        return this._trimChars(String(value), '"');
+        return trimChars(String(value), '"');
     }
 
     /**
@@ -304,16 +337,6 @@ class WordsType extends Type {
     cast(value) {
         return new TypeValue(WordsType.getInstance(), value.value.toString());
     }
-
-    /**
-     * Trim characters in a string.
-     * @param {string} str The string.
-     * @param {string} c The characters.
-     */
-    _trimChars(str, c) {
-        var re = new RegExp("^[" + c + "]+|[" + c + "]+$", "g");
-        return str.replace(re, "");
-    };
 }
 
 WordsType.prototype.instance = null;
@@ -361,9 +384,109 @@ class AnswerType extends Type {
     cast(value) {
         return new TypeValue(AnswerType.getInstance(), Boolean(value.value));
     }
+
+    /**
+     * Determine if the given symbol int is a valid comparator operator symbol (e.g. ==, != etc.).
+     * @param {int} symbol 
+     */
+    isComparatorSymbol(symbol) {
+        return Object.keys(AnswerType.prototype.ComparatorOpMap).indexOf(String(symbol)) > -1;
+    }
+
+    /**
+     * Converts the symbol int into a type string.
+     * @param {int} symbol The symbol int number. Should get from ANTLR parser or lexer.
+     */
+    symbolToComparatorOperator(symbol) {
+        return AnswerType.prototype.ComparatorOpMap[symbol];
+    }
+
+    /**
+     * Determine if the given symbol int is a valid logical operator symbol (e.g. &&, || etc.).
+     * @param {int} symbol 
+     */
+    isLogicalOperatorSymbol(symbol) {
+        return Object.keys(AnswerType.prototype.LogicalOpMap).indexOf(String(symbol)) > -1;
+    }
+
+    /**
+     * Converts the symbol int into a type string.
+     * @param {int} symbol The symbol int number. Should get from ANTLR parser or lexer.
+     */
+    symbolToLogicalOperator(symbol) {
+        return AnswerType.prototype.LogicalOpMap[symbol];
+    }
+
+    /**
+     * Apply the given logical operator on the given values and return the result.
+     * @param {TypeValue} lparam The left parameter.
+     * @param {TypeValue} op The comparison op (<=, >, === etc.).
+     * @param {TypeValue} rparam The right parameter.
+     * @return {TypeValue} The comparison result.
+     */
+    applyLogicalOperator(lparam, op, rparam) {
+        switch (op) {
+            case Parser.LOGICAL_AND:
+                return lparam && rparam ? TypeValue.True : TypeValue.False;
+            case Parser.LOGICAL_OR:
+                return lparam || rparam ? TypeValue.True : TypeValue.False;
+            default:
+                throw new Error('The requested logical operator could not be resolved.');
+        }
+    }
+
+    /**
+     * Compare the given parameters and return the comparison result. 
+     * @param {TypeValue} lparam The left parameter.
+     * @param {TypeValue} op The comparison op (<=, >, === etc.).
+     * @param {TypeValue} rparam The right parameter.
+     * @return {TypeValue} The comparison result.
+     */
+    compareValues(lparam, op, rparam) {
+        /* What is the operator? */
+        let result;
+        switch (op) {
+            case Parser.COMPARE_EQUAL:
+                result = lparam.value == rparam.value;
+                break;
+            case Parser.COMPARE_NOT_EQUAL:
+                result = lparam.value != rparam.value;
+                break;
+            case Parser.COMPARE_SMALLER:
+                result = lparam.value < rparam.value;
+                break;
+            case Parser.COMPARE_GREATER:
+                result = lparam.value > rparam.value;
+                break;
+            case Parser.COMPARE_SMALLER_EQUAL:
+                result = lparam.value <= rparam.value;
+                break;
+            case Parser.COMPARE_GREATER_EQUAL:
+                result = lparam.value >= rparam.value;
+                break;
+            default:
+                throw new Error('Unknown comparator operator detected.');
+        }
+
+        return result ? TypeValue.True : TypeValue.False;
+    }
 }
  
 AnswerType.prototype.instance = null;
+
+/* Defines a list of comparators map */
+AnswerType.prototype.ComparatorOpMap = {};
+for (let token of [Parser.COMPARE_EQUAL, Parser.COMPARE_NOT_EQUAL,
+                   Parser.COMPARE_GREATER, Parser.COMPARE_SMALLER,
+                   Parser.COMPARE_GREATER_EQUAL, Parser.COMPARE_SMALLER_EQUAL]) {
+   AnswerType.prototype.ComparatorOpMap[token] = trimChars(literalNames[token], "'");
+}
+
+/* Defines a list of logical operators map */
+AnswerType.prototype.LogicalOpMap = {};
+for (let token of [Parser.LOGICAL_AND, Parser.LOGICAL_OR, Parser.LOGICAL_NOT]) {
+    AnswerType.prototype.LogicalOpMap[token] = trimChars(literalNames[token], "'");
+}
 
 /*****************************************************************************
  * Null
@@ -432,6 +555,12 @@ PrimitiveType.prototype.PrimitivesMap[Parser.STRING] = WordsType.getInstance();
 PrimitiveType.prototype.PrimitivesMap[Parser.TRUE] = AnswerType.getInstance();
 PrimitiveType.prototype.PrimitivesMap[Parser.FALSE] = AnswerType.getInstance();
 PrimitiveType.prototype.PrimitivesMap[Parser.NULL] = NullType.getInstance();
+
+PrimitiveType.prototype.PrimitivesTypesMap = {};
+PrimitiveType.prototype.PrimitivesTypesMap[Parser.TNUMBER] = NumberType.getInstance();
+PrimitiveType.prototype.PrimitivesTypesMap[Parser.TSTRING] = WordsType.getInstance();
+PrimitiveType.prototype.PrimitivesTypesMap[Parser.TBOOLEAN] = AnswerType.getInstance();
+PrimitiveType.prototype.PrimitivesTypesMap[Parser.NULL] = NullType.getInstance();
 
 /*****************************************************************************
  * An arithmetic utilities class
@@ -581,6 +710,16 @@ class TypesRegistar {
         }
 
         return TypesRegistar.prototype.RegisteredTypes.get(typeName);
+    }
+
+
+    /**
+     * Gets a type by its type symbol.
+     * @param {String} symbol The type symbol.
+     * @return {Type} The saved instance of the type or undefined if it's not exists.
+     */
+    static getFromTypeSymbol(symbol) {
+        return PrimitiveType.findFromTypeSymbol(symbol);
     }
 
     /**
