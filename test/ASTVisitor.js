@@ -101,6 +101,6 @@ byes
         assert.ok(scope.statements[0].lparam instanceof VariableReferenceNode);
         assert.ok(scope.statements[0].rparam instanceof ValueNode);
         assert.equal(scope.statements[0].lparam.name, 'chocolate');
-        assert.equal(scope.statements[0].rparam.value, 'chocolate');
+        assert.equal(scope.statements[0].rparam.value, 2);
     });
 });
