@@ -172,6 +172,56 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
         return program;
     }
 
+
+    /**
+     * Executed when a condition statement is being used.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        condition_block
+            : IF expression CONDITION_SUFFIX statement* IF_SUFFIX (ELSE condition_block)?
+            | IF expression CONDITION_SUFFIX statement* IF_SUFFIX (ELSE condition_block)? ELSE statement* ELSE_SUFFIX
+            ;
+     * </code>
+     */
+    visitCondition_block(ctx) {
+        /* Get the condition */
+        const expression = ctx.getChild(1).accept(this);
+        const evalContext = this._createContext(ctx);
+
+        /* Create the if true and if false code blocks */
+        let ifTrue = undefined;
+        let ifFalse = undefined;
+        let elseIndexDistance = 0;
+        if (!this._isSymbol(ctx.getChild(3))) {
+            ifTrue = ctx.getChild(3).accept(this);
+        } else {
+            /*
+             We didn't have a statements block. For example:
+             if (foo) {
+             } else {
+                 // code
+             }
+             So we should skip on that extra index as it doesn't exists
+             */
+            elseIndexDistance = -1; 
+        }
+
+        /* Do we have an else block? */
+        if (ctx.children.length > 5
+            && ctx.getChild(6 + elseIndexDistance)
+            && !this._isSymbol(ctx.getChild(6 + elseIndexDistance))) {
+            ifFalse = ctx.getChild(6 + elseIndexDistance).accept(this);
+        }
+
+        return NodeFactory({
+            ctx: evalContext,
+            type: ASTNodeType.IFSTATEMENT,
+            args: [expression, ifTrue, ifFalse]
+        });
+    }
+
     /**
      * Executed when a scope is being evaluated.
      * @param {ParsingContext} ctx The parsing context.

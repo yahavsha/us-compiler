@@ -6,8 +6,16 @@ let input = `
 hey
     is meanie
     
-    woah foo is 2k
-    woah a is yupyup or nop
+    woah a is 2
+    anw a same 1?
+        a is 10
+    yay!
+    gosh anw a big 2?
+        a is 20
+    yay!
+    gosh
+        a is 30
+    ugh!
     
     BARRIER! 
     sum is sum + 1

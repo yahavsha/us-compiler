@@ -34,7 +34,7 @@ const {
 } = require('./symbols');
 
 /* Misc */
-const { TypesRegistar, TypeValue, NumberType, AnswerType } = require('../types');
+const { TypesRegistar, TypeValue, NumberType, AnswerType, NullType } = require('../types');
 const Stack = require('../utils/Stack');
 
 /*****************************************************************************
@@ -100,6 +100,9 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         for (let n of node.statements) {
             n.accept(this);
         }
+
+        console.log('end of scope');
+        console.log(this._symbolsTable.toString());
 
         /* Done */
         if (node.scopeType != ScopeNode.prototype.ScopeType.GLOBAL) {
@@ -282,6 +285,81 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         return this._variableLookup(node.context, node.name);
     }
 
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link CastingNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see CastingNode.accept(ASTVisitor visitor)
+     */
+    visitCasting(node) {
+        /* Simply try to cast this variable */
+        try {
+            return node.toType.cast(this._getValue(node.value));
+        } catch (e) {
+            /* We didnt pass a context to this method but the SemanticError Classes demands it. To get around it w/o
+            requiring a context in every arithmetic method, we've thrown the exceptions with empty object.
+            Thus, we'll put here the context */
+            node.context.stackTrace = this._callStack;
+            e.setContext(node.context);
+            throw e;
+        }
+    }
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link ConditionNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see ConditionNode.accept(ASTVisitor visitor)
+     */
+    visitCondition(node) {
+        debug(`visitCondition: ${node}`);
+
+        /* Do we got a logical operator & rparam? */
+        if (!node.rparam) {
+            // Nope so just use the lparam
+            return this._getValue(node.lparam.accept(this));
+        }
+
+        /* Get the values */
+        let lparam = this._getValue(node.lparam.accept(this));
+        let rparam = this._getValue(node.rparam.accept(this));
+
+        /* Apply the operator */
+        return AnswerType.getInstance().applyLogicalOperator(lparam, node.logicalOp, rparam);
+    }
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link ConditionalExpressionNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see ConditionalExpressionNode.accept(ASTVisitor visitor)
+     */
+    visitConditionalExpression(node) {
+        debug(`visitConditionalExpression: ${node}`);
+
+        /* Get the values */
+        let lparam = this._getValue(node.lparam.accept(this));
+        let rparam = this._getValue(node.rparam.accept(this));
+
+        /* Compare them using */
+        return AnswerType.getInstance().compareValues(lparam, node.op, rparam);
+    }
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link IfStatementNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see IfStatementNode.accept(ASTVisitor visitor)
+     */
+    visitIfStatement(node) {
+        debug('visitIfStatement: Evaluating ' + node.condition.toString());
+
+        /* Evaluate the condition */
+        let result = node.condition.accept(this);
+        if (result.value) { // result.value is a standard JS boolean
+            return node.trueScope.accept(this);
+        } else if (typeof(node.falseScope) !== 'undefined') {
+            return node.falseScope.accept(this);
+        }
+    }
+
     /*********************** Private helpers ***********************/
 
     /**
@@ -358,6 +436,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      * @param {Symbol} newValue 
      */
     _updateSymbolTable(ctx, symbol, newValue) {
+        debug(`Updating symbol table for ${symbol.name} with ${newValue}`);
         if (!(symbol instanceof VariableSymbol)) {
             throw new Error('_updateSymbolTable expects to get a Symbol.');
         }
@@ -366,68 +445,14 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
 
         if (this._isMeanie) {
             // If we're mean, we won't allow to switch data types
-            if (symbol.value.type.name != newValue.type.name) {
+            if (symbol.value.type.name != NullType.getInstance().name // we can always use null
+                && newValue.type.name != NullType.getInstance().name // we can always use null
+                && symbol.value.type.name != newValue.type.name) {
                 throw new InvalidOperationError(`The variable "${symbol.name}" contains rvalue of type ${symbol.value.type.name}. It can not get assigned with an rvalue of type ${newValue.type.name}.`, ctx);
             }
         }
 
+        symbol.value = newValue;
         this._symbolsTable.set(symbol.name, symbol);
-    }
-
-    /**
-     * A method that's being triggered when the visitor visits a {@link CastingNode}.
-     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
-     * @see CastingNode.accept(ASTVisitor visitor)
-     */
-    visitCasting(node) {
-        /* Simply try to cast this variable */
-        try {
-            return node.toType.cast(this._getValue(node.value));
-        } catch (e) {
-            /* We didnt pass a context to this method but the SemanticError Classes demands it. To get around it w/o
-            requiring a context in every arithmetic method, we've thrown the exceptions with empty object.
-            Thus, we'll put here the context */
-            node.context.stackTrace = this._callStack;
-            e.setContext(node.context);
-            throw e;
-        }
-    }
-
-    /**
-     * A method that's being triggered when the visitor visits a {@link ConditionNode}.
-     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
-     * @see ConditionNode.accept(ASTVisitor visitor)
-     */
-    visitCondition(node) {
-        debug(`visitCondition: ${node}`);
-
-        /* Do we got a logical operator & rparam? */
-        if (!node.rparam) {
-            // Nope so just use the lparam
-            return this._getValue(node.lparam.accept(this));
-        }
-
-        /* Get the values */
-        let lparam = this._getValue(node.lparam.accept(this));
-        let rparam = this._getValue(node.rparam.accept(this));
-
-        /* Apply the operator */
-        return AnswerType.getInstance().applyLogicalOperator(lparam, node.logicalOp, rparam);
-    }
-
-    /**
-     * A method that's being triggered when the visitor visits a {@link ConditionalExpressionNode}.
-     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
-     * @see ConditionalExpressionNode.accept(ASTVisitor visitor)
-     */
-    visitConditionalExpression(node) {
-        debug(`visitConditionalExpression: ${node}`);
-
-        /* Get the values */
-        let lparam = this._getValue(node.lparam.accept(this));
-        let rparam = this._getValue(node.rparam.accept(this));
-
-        /* Compare them using */
-        return AnswerType.getInstance().compareValues(lparam, node.op, rparam);
     }
 };

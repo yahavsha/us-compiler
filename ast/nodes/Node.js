@@ -15,6 +15,7 @@ module.exports.ASTNodeType = {
     CONDITION:                        9,
     CASTING:                        10,
     CONDITIONALEXPRESSION:                        11,
+    IFSTATEMENT:                        12,
 };
 
 /**
