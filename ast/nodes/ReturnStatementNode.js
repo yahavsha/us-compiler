@@ -10,41 +10,39 @@ const { ASTNodeType, ASTNode } = require('./Node');
  *****************************************************************************/
 
 /**
- * Defines the FunctionDeclarationNode.
+ * Defines the ReturnStatementNode.
  */
-module.exports = class FunctionDeclarationNode extends ASTNode {
+module.exports = class ReturnStatementNode extends ASTNode {
     /**
      * Instantiate a new node instance.
      * @param {ParsingContext} ctx The parsing context.
+     * @param {ASTNode} expression The returned expression.
      */
-    constructor(ctx, name, args, scope) {
+    constructor(ctx, expression) {
         super(ctx);
-
-        this.name = name;
-        this.args = args;
-        this.scope = scope;
+        this.expression = expression;
     }
 
     /**
      * Gets the node type.
      */
     static getNodeType() {
-        return ASTNodeType.FUNCTIONDECLARATION;
+        return ASTNodeType.RETURNSTATEMENT;
     }
 
     /**
      * Accepts a visitor call to this AST node and forward it to the visitor function.
      * @param {ASTVisitor} visitor The visitor.
-     * @see ASTVisitor.visitFunctionDeclaration(ASTNode node)
+     * @see ASTVisitor.visitReturnStatement(ASTNode node)
      */
     accept(visitor) {
-        return visitor.visitFunctionDeclaration(this);
+        return visitor.visitReturnStatement(this);
     }
 
     /**
      * Gets a description of this node.
      */
     toString() {
-        return `FunctionDeclarationNode { name = "${this.name}", args = "${this.args}", scope = "${this.scope}" }`;
+        return `ReturnStatementNode { expression = "${this.expression}" }`;
     }
 }

@@ -149,14 +149,14 @@ postfix_expression
     ;
 
 primary_expression
-    : NUMBER
+    : LPAREN expression RPAREN
+    | function_call
+    | NUMBER
     | STRING
     | NULL
     | TRUE
     | FALSE
     | LABEL
-    | LPAREN expression RPAREN
-    | function_call
     ;
 
 type_specifiers
@@ -187,9 +187,9 @@ while_block
     ;
 
 /****************** Functions ******************/
-return_statement:
-        RETURN              // < stopping w/o returning anything, like "return;"
-    |   RETURN expression   // < returning a value, like "return chocolates;"
+return_statement
+    : RETURN expression   // < returning a value, like "return chocolates;"
+    | RETURN
     ;
 
 function_decl:

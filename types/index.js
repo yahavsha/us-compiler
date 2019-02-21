@@ -812,15 +812,17 @@ class TypesRegistar {
     static createValue(value) {
         if (value === null) {
             return NullType().getInstance().createValue(null);
+        } else if (value === undefined) {
+            return;
         }
 
         switch (typeof(value)) {
             case 'number':
-                return NumberType.getInstance().createValue(value);
+                return new TypeValue(NumberType.getInstance(), value);
             case 'string':
-                return WordsType.getInstance().createValue(value);
+                return new TypeValue(WordsType.getInstance(), value);
             case 'boolean':
-                return AnswerType.getInstance().createValue(value);
+                return new TypeValue(AnswerType.getInstance(), value);
             default:
                 throw new Error('Could not resolve the given global variable type.');
         }

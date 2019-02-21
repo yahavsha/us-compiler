@@ -6,12 +6,12 @@ let input = `
 hey
     is meanie
     
-	friend add with (a, b):
-        gimme a + b
+    friend add with (a, b):
+        gimme 1
     hihi!
 
-    (summons print with ("Hello" + " " + "World!"))
-    summons random
+    (summons print with ("Hello" + (summons random) + "World!"))
+    
     
     woah a is 1
 

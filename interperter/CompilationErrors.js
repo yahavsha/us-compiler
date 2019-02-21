@@ -339,13 +339,33 @@ class StackOverflowError extends SemanticError {
     }
 }
 
+class AmbiguousSymbolError extends SemanticError {
+    constructor(symbol, ctx) {
+        super(`The symbol "${symbol}" is ambiguous. It might been already used. Try to choose another symbol this time.`, ctx);
+        Error.captureStackTrace(this, StackOverflowError);
+    }
+}
+
+class FunctionAlreadyDefinedError extends SemanticError {
+    constructor(name, ctx) {
+        super(`The function "${name}" was already defined.`, ctx);
+        Error.captureStackTrace(this, StackOverflowError);
+    }
+}
+
+class InvalidArgumentsCountError extends SemanticError {
+    constructor(name, expected, given, ctx) {
+        super(`Invalid number of arguments: The function ${name} expects to get ${expected} arguments, but ${given} given.`, ctx);
+        Error.captureStackTrace(this, StackOverflowError);
+    }
+}
 
 /*****************************************************************************
  * Export 'hem all
  * https://www.youtube.com/watch?v=wrCUQuJsDYI ᕙ[ ˵ ͡’ ω ͡’ ˵ ]ᕗ
  *****************************************************************************/
 
-//ambiguous
+//
 module.exports = {
     CompilationError,
     SyntaxError,
@@ -358,5 +378,8 @@ module.exports = {
     DivisionByZeroError,
     InvalidCastError,
     FormatError,
-    StackOverflowError
+    StackOverflowError,
+    AmbiguousSymbolError,
+    FunctionAlreadyDefinedError,
+    InvalidArgumentsCountError
 };

@@ -4,6 +4,7 @@
 
 const { Symbol, SymbolType } = require('./Symbol');
 const { TypeValue } = require('../../types');
+const ScopeNode = require('../../ast/nodes/ScopeNode');
 
 /*****************************************************************************
  * Describes a function symbol
@@ -18,7 +19,7 @@ module.exports = class FunctionSymbol extends Symbol {
      * @param {String} name The function name.
      * @param {String} args The function args.
      */
-    constructor(name, args) {
+    constructor(name, args, scope) {
         super(name); // symbol name = function name
 
         if (!args) {
@@ -26,8 +27,24 @@ module.exports = class FunctionSymbol extends Symbol {
         }
 
         this.name = name;
-        this.args = [];
+        this.args = args;
+        this.scope = scope;
     }
+
+    /**
+     * Gets true if this is a native function.
+     */
+    isNativeFunction() {
+        return !this.isUserFunction();
+    }
+
+    /**
+     * Gets true if this is a user function.
+     */
+    isUserFunction() {
+        return this.scope instanceof ScopeNode;
+    }
+
 
     /**
      * Gets the symbol type.
@@ -41,6 +58,10 @@ module.exports = class FunctionSymbol extends Symbol {
      * Gets a string representation of this symbol.
      */
     toString() {
-        return `FunctionSymbol { name = "${this.name}", args = "${this.args}" }`;
+        if (this.isUserFunction()) {
+            return `FunctionSymbol [user method] { name = "${this.name}", args = "${this.args}", scope = "${this.scope}" }`;
+        } else {
+            return `FunctionSymbol [native method] { name = "${this.name}", args = "${this.args}" }`;
+        }
     }
 };

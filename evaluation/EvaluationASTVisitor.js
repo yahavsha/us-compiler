@@ -23,7 +23,10 @@ const {
     VariableAlreadyDefinedError,
     VariableNotDefinedError,
     InvalidOperationError,
-    StackOverflowError
+    StackOverflowError,
+    AmbiguousSymbolError,
+    FunctionAlreadyDefinedError,
+    InvalidArgumentsCountError
 } = require('../interperter/CompilationErrors');
 
 /* Symbols */
@@ -31,7 +34,8 @@ const {
     SymbolType,
     SymbolFactory,
     SymbolTable,
-    VariableSymbol
+    VariableSymbol,
+    FunctionSymbol
 } = require('./symbols');
 
 /* Misc */
@@ -43,18 +47,23 @@ const Stack = require('../utils/Stack');
  *****************************************************************************/
 
 module.exports = class EvaluationASTVisitor extends ASTVisitor {
-    constructor(globalVariables) {
+    constructor(globalVariables, nativeFunctions) {
         super();
         this._symbolsTable = new SymbolTable();
         this._isMeanie = false;
         this._scopeDepth = 0;
         this._callStack = new Stack();
 
-        console.log(globalVariables);
         if (globalVariables) {
             for (let k in globalVariables) {
                 debug('Adding global variable: ' + k);
                 this.setGlobalVariable(k, globalVariables[k]);
+            }
+        }
+
+        if (nativeFunctions) {
+            for (let def of nativeFunctions) {
+                this.setNativeFunction(def.name, def.args, def.callback, def.sendTypeValue);
             }
         }
     }
@@ -67,9 +76,23 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      * @param {TypeValue} value The variable value.
      */
     setGlobalVariable(name, value) {
-        this._symbolsTable.add(name, SymbolFactory({
+        this._addSymbol(name, SymbolFactory({
             type: SymbolType.VARIABLE,
             args: [name, value]
+        }));
+    }
+
+    /**
+     * Expose a JavaScript function to the US interperter.
+     * @param {string} name The function name.
+     * @param {*} args The function argument names.
+     * @param {*} callback The actual JavaScript callback which'll get fired.
+     * @param {*} sendTypeValue Set to true to get {@see TypeValue} instead of native JS values.
+     */
+    setNativeFunction(name, args, pointer, sendTypeValue) {
+        this._addSymbol(name, SymbolFactory({
+            type: SymbolType.FUNCTION,
+            args: [name, args, [pointer, sendTypeValue]]
         }));
     }
 
@@ -137,29 +160,21 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      */
     visitVariableDeclaration(node) {
         debug(`visitVariableDeclaration: declaring variable: ${node.name}`);
-        /* Did we delcared it before? */
-        if (this._symbolsTable.exists(node.name)) {
-            if (this._isMeanie) {
-                throw new VariableAlreadyDefinedError(node.name, node.context);
-            }
-
-            return; // Otherwise we just ignore it.
-        }
 
         /* Declare it */
         if (node.value) {
             /* With value */
             let value = node.value.accept(this);
-            this._symbolsTable.add(node.name, SymbolFactory({
+            this._addSymbol(node.name, SymbolFactory({
                 type: SymbolType.VARIABLE,
                 args: [node.name, value]
-            }));
+            }), node.context);
         } else {
             /* W/O value */
-            this._symbolsTable.add(node.name, SymbolFactory({
+            this._addSymbol(node.name, SymbolFactory({
                 type: SymbolType.VARIABLE,
                 args: [node.name]
-            }));
+            }), node.context);
         }
     }
 
@@ -381,6 +396,38 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
     }
 
     /**
+     * A method that's being triggered when the visitor visits a {@link FunctionDeclarationNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see FunctionDeclarationNode.accept(ASTVisitor visitor)
+     */
+    visitFunctionDeclaration(node) {
+        debug(`visitFunctionDeclaration: declaring ${node.name}(${node.args.join(', ')})`);
+        
+        /* Try to declare that new symbol, ya? */
+        this._addSymbol(node.name, SymbolFactory({
+            type: SymbolType.FUNCTION,
+            args: [node.name, node.args, node.scope]
+        }), node.context);
+    }
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link FunctionCallNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see FunctionCallNode.accept(ASTVisitor visitor)
+     */
+    visitFunctionCall(node) {
+        /* Attempt to find 'at function */
+        let symbol = this._functionLookup(node.context, node.name, node.args.length);
+        
+        /* Is this a native function or a user one? */
+        if (symbol.isNativeFunction()) {
+            return this._executeNativeFunction(node, symbol);
+        } else {
+            return this._executeUserFunction(node, symbol);
+        }
+    }
+
+    /**
      * A method that's being triggered when the visitor visits a {@link ForLoopNode}.
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see ForLoopNode.accept(ASTVisitor visitor)
@@ -440,6 +487,33 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
 
     /*********************** Private helpers ***********************/
 
+    _addSymbol(name, symbol, context = {}) {
+        /* Did we delcared it before? */
+        let existingSymbol = this._symbolsTable.find(name);
+        if (existingSymbol != null) {
+            if (existingSymbol instanceof VariableSymbol
+                && symbol instanceof VariableSymbol) {
+                /* Both are variables, that's a good start. If we're not being mean, we'll
+                allow that mistake. otherwise we'll kill the program! */
+                if (this._isMeanie) {
+                    throw new VariableAlreadyDefinedError(name, context);
+                }
+
+                return; // Otherwise we just ignore it.
+            } else if (existingSymbol instanceof FunctionSymbol
+                && symbol instanceof FunctionSymbol) {
+                    /* Both are functions. We might allow to overload at the future, but not right now. */
+                    throw new FunctionAlreadyDefinedError(name, context);
+                } else {
+                    /* One is a function and one is a variable. Wut?! */
+                    throw new AmbiguousSymbolError(name, context);
+                }
+        }
+        
+        /* Do we already have this symbol? */
+        this._symbolsTable.add(name, symbol);
+    }
+
     /**
      * Searchs for the given variable name in the symbols table.
      * @param {EvaluationContext} context The evaluation context.
@@ -460,7 +534,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
                     type: SymbolType.VARIABLE,
                     args: [node.name]
                 });
-                this._symbolsTable.add(node.name, symbol);
+                this._symbolsTable.add(node.name, symbol, context);
                 return symbol; // We have return later, but I wanna skip on the type check (the instanceof thingy).
             }
         }
@@ -468,6 +542,33 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         /* Is this a variable symbol */
         if (!(symbol instanceof VariableSymbol)) {
             throw new UnexpectedSymbolError(name, context);
+        }
+
+        return symbol;
+    }
+
+
+    /**
+     * Searchs for the given function name in the symbols table.
+     * @param {EvaluationContext} context The evaluation context.
+     * @param {string} name The variable name.
+     * @return {VariableSymbol}
+     */
+    _functionLookup(context, name, argsCount) {
+        let symbol = this._symbolsTable.find(name);
+        if (symbol === null) {
+            debug(`Could not find the symbol ${name} in the symbols table.`);
+            throw new UnexpectedSymbolError(name, context);
+        }
+
+        /* Is this a variable symbol */
+        if (!(symbol instanceof FunctionSymbol)) {
+            throw new UnexpectedSymbolError(name, context);
+        }
+
+        /* The number of arguments matches what we expect to get? */
+        if (symbol.args.length != argsCount) {
+            throw new InvalidArgumentsCountError(symbol.name, symbol.args.length, argsCount, context);
         }
 
         return symbol;
@@ -533,4 +634,59 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         symbol.value = newValue;
         this._symbolsTable.set(symbol.name, symbol);
     }
+
+    /**
+     * Executes a native (JS) function.
+     * @param {ASTNode} node 
+     * @param {FunctionSymbol} symbol 
+     */
+    _executeNativeFunction(node, symbol) {
+        /* Get the args */
+        let args = this._executeFunctionGetArgs(node, symbol);
+
+        /* Do we use the type values or should we unpack them? */
+        if (!symbol.scope[1]) {
+            args = args.map(v => v.value);
+        }
+        
+        /* That's the time we've been waiting forrrrrr!!
+        Yesss!! (◡ ‿ ◡✿). Execute it! */
+        let result = symbol.scope[0](... args);
+
+        /* Convert the result into TypeValue */
+        if (result instanceof TypeValue) {
+            return result;
+        }
+
+        return TypesRegistar.createValue(result);
+    }
+
+    /**
+     * Executes a user function.
+     * @param {ASTNode} node 
+     * @param {FunctionSymbol} symbol 
+     */
+    _executeUserFunction(node, symbol) {
+        throw 'here';
+    }
+
+    /**
+     * Gets the function arguments.
+     * @param {ASTNode} node 
+     * @param {FunctionSymbol} symbol 
+     */
+    _executeFunctionGetArgs(node, symbol) {
+        let args = [];
+        for (let arg of node.args) {
+            let argValue = arg.accept(this);
+            if (!(argValue instanceof TypeValue)) {
+                throw new UnexpectedSymbolError(symbol.name, node.context);
+            }
+            
+            args.push(argValue);
+        }
+
+        return args;
+    }
+
 };

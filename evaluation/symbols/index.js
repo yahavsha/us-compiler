@@ -15,6 +15,7 @@
 
 const { SymbolType, Symbol } = require('./Symbol');
 const VariableSymbol = require('./VariableSymbol');
+const FunctionSymbol = require('./FunctionSymbol');
 const SymbolTable = require('./SymbolTable');
 
 /*****************************************************************************
@@ -35,6 +36,8 @@ function SymbolFactory(options = {
     switch (options.type) {
         case SymbolType.VARIABLE:
             return new VariableSymbol(... options.args);
+        case SymbolType.FUNCTION:
+            return new FunctionSymbol(... options.args);
         default:
             throw new Error('Could not create the requested symbol (type: ' + type + ').');
     }
@@ -50,5 +53,6 @@ module.exports = {
     Symbol,
     SymbolTable,
     SymbolType,
-    VariableSymbol
+    VariableSymbol,
+    FunctionSymbol
 };

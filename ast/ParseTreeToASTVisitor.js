@@ -358,7 +358,6 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
         });
     }
 
-
     /**
      * Executed when a function is being called.
      * @param {ParsingContext} ctx The parsing context.
@@ -401,6 +400,31 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
             type: ASTNodeType.FUNCTIONCALL,
             args: [functionName, functionArgs]
         });
+    }
+
+    /**
+     * Executed when a a return statement was used.
+     * @param {ParsingContext} ctx The parsing context.
+     * @description The invoking rule is:
+     * <code>
+        return_statement:
+                RETURN              // < stopping w/o returning anything, like "return;"
+            |   RETURN expression   // < returning a value, like "return chocolates;"
+            ;
+     * </code>
+     */
+    visitReturn_statement(ctx) {
+        /* Do we return any value? */
+        let value = undefined;
+        if (ctx.children.length === 2) {
+            value = ctx.getChild(1).accept(this);
+        }
+        
+        return NodeFactory({
+            ctx: this._createContext(ctx),
+            type: ASTNodeType.RETURNSTATEMENT,
+            args: [value]
+        })
     }
 
     /**
