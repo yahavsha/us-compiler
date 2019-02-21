@@ -10,6 +10,9 @@ hey
         gimme a + b
     hihi!
 
+    (summons print with ("Hello" + " " + "World!"))
+    summons random
+    
     woah a is 1
 
     BARRIER! 
@@ -96,6 +99,9 @@ try {
     const interperter = new Interperter();
     interperter.setGlobalVariable('name', 'Nozomi');
     interperter.setGlobalVariable('name2', WordsType.getInstance().createValue('Yahav'));
+    interperter.setNativeFunction('print', ['message'], m => console.log('** ' + m + ' **'));
+    interperter.setNativeFunction('random', [], m => Math.random());
+
 
     interperter.interpert(input);
 } catch (e) {

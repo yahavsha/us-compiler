@@ -47,6 +47,7 @@ module.exports = class Interperter {
         this.errorListeners = [new ExceptionsBasedErrorListener()];
         this.errorsCount = 0;
         this.globalVariables = {};
+        this.nativeFunctions = [];
         this.options = new InterperterOptions();
 
         this.setGlobalVariable('__VERSION__', Interperter.getVersion());
@@ -68,6 +69,11 @@ module.exports = class Interperter {
         this.options = options;
     }
 
+    /**
+     * Sets a global variable.
+     * @param {string} name The variable name.
+     * @param {*} value The variable value.
+     */
     setGlobalVariable(name, value) {
         /* Is this a value type? */
         if (!(value instanceof TypeValue)) {
@@ -77,6 +83,23 @@ module.exports = class Interperter {
         this.globalVariables[name] = value;
     }
 
+    /**
+     * Expose a JavaScript function to the US interperter.
+     * @param {string} name The function name.
+     * @param {*} args The function argument names.
+     * @param {*} callback The actual JavaScript callback which'll get fired.
+     * @param {*} sendTypeValue Set to true to get {@see TypeValue} instead of native JS values.
+     */
+    setNativeFunction(name, args, callback, sendTypeValue = false) {
+        this.nativeFunctions.push({
+            name, args, callback, sendTypeValue
+        });
+    }
+
+    /**
+     * Adds custom error listener.
+     * @param {*} listener The custom listener.
+     */
     addErrorListener(listener) {
         this.errorListeners.push(listener);
     }
@@ -122,7 +145,7 @@ module.exports = class Interperter {
 
         /* Evaluates the tree */
         const EvaluationASTVisitor = require('../evaluation/EvaluationASTVisitor');
-        const evaluator = new EvaluationASTVisitor(this.globalVariables);
+        const evaluator = new EvaluationASTVisitor(this.globalVariables, this.nativeFunctions);
         evaluator.visitProgram(ast);
     }
 

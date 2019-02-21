@@ -19,6 +19,7 @@ module.exports.ASTNodeType = {
     FORLOOP:                        13,
     WHILELOOP:                        14,
     FUNCTIONDECLARATION:                        15,
+    FUNCTIONCALL:                        16,
 };
 
 /**

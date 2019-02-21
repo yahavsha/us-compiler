@@ -316,7 +316,6 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
         let functionName = ctx.getChild(1).getText();
         let functionArgs = [];
 
-        this._printChilds(ctx);
         /* Get the function args. Note that we're working with plain symbols. In addition,
         we have two declaration methods:
             function a:
@@ -356,6 +355,51 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
             ctx: this._createContext(ctx),
             type: ASTNodeType.FUNCTIONDECLARATION,
             args: [functionName, functionArgs, scope]
+        });
+    }
+
+
+    /**
+     * Executed when a function is being called.
+     * @param {ParsingContext} ctx The parsing context.
+     * @description The invoking rule is:
+     * <code>
+        function_call:
+            FUNCTION_CALL LABEL ((FUNCTION_ARGS LPAREN expression) (FUNCTION_ARGS_SEP expression)* RPAREN)?
+            ;
+     * </code>
+     */
+    visitFunction_call(ctx) {
+        /* Get the name (we can't "accept" it as we'll get VariableReference) */
+        let functionName = ctx.getChild(1).getText();
+        let functionArgs = [];
+
+        /* Get the function args. If we don't have args, we've finished right here! */
+        if (ctx.children.length > 2) {
+            let i = 4;
+            while (i < ctx.children.length) {
+                if (this._isSymbol(ctx.getChild(i))) {
+                    /* If we're the closing paren, then we should stop */
+                    let symb = ctx.getChild(i).getSymbol();
+                    if (symb.type === Parser.RPAREN) {
+                        break;
+                    }
+
+                    /* If we're comma, continue */
+                    if (symb.type === Parser.FUNCTION_ARGS_SEP) {
+                        ++i;
+                        continue;
+                    }
+                }
+
+                functionArgs.push(ctx.getChild(i++).accept(this));
+            }
+        }
+
+        return NodeFactory({
+            ctx: this._createContext(ctx),
+            type: ASTNodeType.FUNCTIONCALL,
+            args: [functionName, functionArgs]
         });
     }
 
