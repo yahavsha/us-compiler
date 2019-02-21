@@ -25,6 +25,9 @@ const InterperterOptions = require('./InterperterOptions');
 /* Error Handler */
 const ExceptionsBasedErrorListener = require('./ExceptionsBasedErrorListener');
 
+/* Types */
+const { TypesRegistar, TypeValue } = require('../types');
+
 /*****************************************************************************
  * Define the Interperter Facade class
  *****************************************************************************/
@@ -46,7 +49,7 @@ module.exports = class Interperter {
         this.globalVariables = {};
         this.options = new InterperterOptions();
 
-        this.setGlobalVariable('__VERSION__', __US_VERSION);
+        this.setGlobalVariable('__VERSION__', Interperter.getVersion());
     }
 
     /**
@@ -66,8 +69,12 @@ module.exports = class Interperter {
     }
 
     setGlobalVariable(name, value) {
-        /* Convert the variable into a value node */
-        // this.globalVariables[name] = createUSValue(value);
+        /* Is this a value type? */
+        if (!(value instanceof TypeValue)) {
+            value = TypesRegistar.createValue(value);
+        }
+
+        this.globalVariables[name] = value;
     }
 
     addErrorListener(listener) {
@@ -110,15 +117,12 @@ module.exports = class Interperter {
 
         /* Evaluate the code by using our evaluation visitors */
         const ParseTreeToASTVisitor = require('../ast/ParseTreeToASTVisitor');
-        const cstVisitor = new ParseTreeToASTVisitor(this.options, this.globalVariables);
+        const cstVisitor = new ParseTreeToASTVisitor(this.options);
         const ast = cstVisitor.start(cst);
-
-        // console.log(ast);
-        // process.exit(0);
 
         /* Evaluates the tree */
         const EvaluationASTVisitor = require('../evaluation/EvaluationASTVisitor');
-        const evaluator = new EvaluationASTVisitor();
+        const evaluator = new EvaluationASTVisitor(this.globalVariables);
         evaluator.visitProgram(ast);
     }
 

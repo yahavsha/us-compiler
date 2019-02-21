@@ -43,12 +43,34 @@ const Stack = require('../utils/Stack');
  *****************************************************************************/
 
 module.exports = class EvaluationASTVisitor extends ASTVisitor {
-    constructor() {
+    constructor(globalVariables) {
         super();
         this._symbolsTable = new SymbolTable();
         this._isMeanie = false;
         this._scopeDepth = 0;
         this._callStack = new Stack();
+
+        console.log(globalVariables);
+        if (globalVariables) {
+            for (let k in globalVariables) {
+                debug('Adding global variable: ' + k);
+                this.setGlobalVariable(k, globalVariables[k]);
+            }
+        }
+    }
+
+    /*********************** Public API ***********************/
+
+    /**
+     * Sets the given global variable.
+     * @param {string} name The variable name.
+     * @param {TypeValue} value The variable value.
+     */
+    setGlobalVariable(name, value) {
+        this._symbolsTable.add(name, SymbolFactory({
+            type: SymbolType.VARIABLE,
+            args: [name, value]
+        }));
     }
 
     /*********************** Visiting Rules ***********************/
@@ -101,9 +123,6 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         for (let n of node.statements) {
             n.accept(this);
         }
-
-        console.log('end of scope');
-        console.log(this._symbolsTable.toString());
 
         /* Done */
         if (node.scopeType != ScopeNode.prototype.ScopeType.GLOBAL) {

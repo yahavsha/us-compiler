@@ -799,6 +799,32 @@ class TypesRegistar {
         to allow things like C++ operator+, operator- etc. */
         return PrimitiveType.performArithmeticOperation(lparam, op, rparam);
     }
+
+
+    /**
+     * Creates a JS value that corresponds to this specific type representation.
+     * For example, In NumberType, it takes a string number (like "3.14") and converts it into JS 3.14 (the number).
+     * 
+     * Note that this function gets the type based on the JS type.
+     * @param {*} value The value to parse.
+     * @return {TypeValue}
+     */
+    static createValue(value) {
+        if (value === null) {
+            return NullType().getInstance().createValue(null);
+        }
+
+        switch (typeof(value)) {
+            case 'number':
+                return NumberType.getInstance().createValue(value);
+            case 'string':
+                return WordsType.getInstance().createValue(value);
+            case 'boolean':
+                return AnswerType.getInstance().createValue(value);
+            default:
+                throw new Error('Could not resolve the given global variable type.');
+        }
+    }
 };
 
 /* Static fields */

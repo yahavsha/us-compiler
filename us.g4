@@ -186,23 +186,6 @@ while_block
     : WHILE expression CONDITION_SUFFIX scope WHILE_SUFFIX
     ;
 
-/****************** Conditions Definitions ******************/
-// conditional_expression
-//     : and_chained_conditional_expression (LOGICAL_AND and_chained_conditional_expression)*
-//     ;
-
-// and_chained_conditional_expression
-//     : single_conditional_expression (LOGICAL_OR single_conditional_expression)*
-//     ;
-
-// single_conditional_expression
-//     : expression COMPARE_EQUAL expression
-//     | expression COMPARE_NOT_EQUAL expression
-//     | expression COMPARE_GREATER expression
-//     | expression COMPARE_SMALLER expression
-//     ;
-
-
 /****************** Functions ******************/
 return_statement:
         RETURN              // < stopping w/o returning anything, like "return;"
@@ -210,7 +193,7 @@ return_statement:
     ;
 
 function_decl:
-    FUNCTION LABEL ((FUNCTION_ARGS LPAREN LABEL) (FUNCTION_ARGS_SEP LABEL)* RPAREN)? FUNCTION_DECL_SUFFIX statement* FUNCTION_SUFFIX
+    FUNCTION LABEL ((FUNCTION_ARGS LPAREN LABEL) (FUNCTION_ARGS_SEP LABEL)* RPAREN)? FUNCTION_DECL_SUFFIX scope FUNCTION_SUFFIX
     ;
 
 function_call:

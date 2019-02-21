@@ -6,6 +6,13 @@ let input = `
 hey
     is meanie
     
+	friend add with (a, b):
+        gimme a + b
+    hihi!
+
+    woah a is 1
+
+    BARRIER! 
     woah a is 2
     woah sum is 1
     woah i is 1
@@ -13,7 +20,6 @@ hey
         sum is sum * i++
     stop!
 
-    BARRIER! 
 	hides (woah i is 1; ++i) til (i small 50)
         sum is sum + i
     foundya!
@@ -86,7 +92,11 @@ byes
 `;
 
 try {
+    const {WordsType}=require('./types');
     const interperter = new Interperter();
+    interperter.setGlobalVariable('name', 'Nozomi');
+    interperter.setGlobalVariable('name2', WordsType.getInstance().createValue('Yahav'));
+
     interperter.interpert(input);
 } catch (e) {
     // throw e;

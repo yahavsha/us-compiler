@@ -18,6 +18,7 @@ module.exports.ASTNodeType = {
     IFSTATEMENT:                        12,
     FORLOOP:                        13,
     WHILELOOP:                        14,
+    FUNCTIONDECLARATION:                        15,
 };
 
 /**

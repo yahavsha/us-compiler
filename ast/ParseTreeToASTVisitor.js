@@ -302,6 +302,64 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
     }
 
     /**
+     * Executed when a function was declared.
+     * @param {ParsingContext} ctx The parsing context.
+     * @description The invoking rule is:
+     * <code>
+        function_decl:
+            FUNCTION LABEL ((FUNCTION_ARGS LPAREN LABEL) (FUNCTION_ARGS_SEP LABEL)* RPAREN)? FUNCTION_DECL_SUFFIX scope FUNCTION_SUFFIX
+            ;
+     * </code>
+     */
+    visitFunction_decl(ctx) {
+        /* Get the name (we can't "accept" it as we'll get VariableReference) */
+        let functionName = ctx.getChild(1).getText();
+        let functionArgs = [];
+
+        this._printChilds(ctx);
+        /* Get the function args. Note that we're working with plain symbols. In addition,
+        we have two declaration methods:
+            function a:
+            function a with (a, b):
+        The first one doesn't take args. Note that u cant have "with ()".
+        Thus we need to first check if we got args at all.
+        */
+       let scopeIndex = 3; // If we don't have arguments
+       if (ctx.getChild(2).getSymbol().type != Parser.FUNCTION_DECL_SUFFIX) {
+            let i = 4;
+            while (i < ctx.children.length) {
+                if (this._isSymbol(ctx.getChild(i))) {
+                    /* If we're the closing paren, then we should stop */
+                    let symb = ctx.getChild(i).getSymbol();
+                    if (symb.type === Parser.RPAREN) {
+                        break;
+                    }
+
+                    /* If we're comma, continue */
+                    if (symb.type === Parser.FUNCTION_ARGS_SEP) {
+                        ++i;
+                        continue;
+                    }
+                }
+
+                functionArgs.push(ctx.getChild(i++).getText());
+            }
+            
+            scopeIndex = i + 2;
+        }
+
+        /* Parse the scope */
+        let scope = ctx.getChild(scopeIndex).accept(this);
+
+        /* Create the node */
+        return NodeFactory({
+            ctx: this._createContext(ctx),
+            type: ASTNodeType.FUNCTIONDECLARATION,
+            args: [functionName, functionArgs, scope]
+        });
+    }
+
+    /**
      * Executed when a scope is being evaluated.
      * @param {ParsingContext} ctx The parsing context.
      * @description The invoking rule is:

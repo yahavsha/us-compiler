@@ -23,6 +23,7 @@ const {
     IfStatementNode,
     ForLoopNode,
     WhileLoopNode,
+    FunctionDeclarationNode,
 } = require('./nodes');
 
 /*****************************************************************************
@@ -166,6 +167,15 @@ module.exports = class ASTVisitor {
      * @see WhileLoopNode.accept(ASTVisitor visitor)
      */
     visitWhileLoop(node) {
+        /* Implementation */
+    }
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link FunctionDeclarationNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see FunctionDeclarationNode.accept(ASTVisitor visitor)
+     */
+    visitFunctionDeclaration(node) {
         /* Implementation */
     }
 };
