@@ -21,6 +21,7 @@ const {
     CastingNode,
     ConditionalExpressionNode,
     IfStatementNode,
+    ForLoopNode,
 } = require('./nodes');
 
 /*****************************************************************************
@@ -146,6 +147,15 @@ module.exports = class ASTVisitor {
      * @see IfStatementNode.accept(ASTVisitor visitor)
      */
     visitIfStatement(node) {
+        /* Implementation */
+    }
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link ForLoopNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see ForLoopNode.accept(ASTVisitor visitor)
+     */
+    visitForLoop(node) {
         /* Implementation */
     }
 };

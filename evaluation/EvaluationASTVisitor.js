@@ -22,7 +22,8 @@ const {
     UnexpectedSymbolError,
     VariableAlreadyDefinedError,
     VariableNotDefinedError,
-    InvalidOperationError
+    InvalidOperationError,
+    StackOverflowError
 } = require('../interperter/CompilationErrors');
 
 /* Symbols */
@@ -357,6 +358,40 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
             return node.trueScope.accept(this);
         } else if (typeof(node.falseScope) !== 'undefined') {
             return node.falseScope.accept(this);
+        }
+    }
+
+    /**
+     * A method that's being triggered when the visitor visits a {@link ForLoopNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see ForLoopNode.accept(ASTVisitor visitor)
+     */
+    visitForLoop(node) {
+        debug('visitForLoop');
+
+        /* Initialize */
+        if (node.initialization) {
+            node.initialization.accept(this);
+        }
+
+        let conditionResult = node.termination.accept(this);
+        let iter = 0;
+        while (conditionResult.value) {
+            /* Perform the loop body */
+            node.scope.accept(this);
+            
+            /* Perform the increment */
+            if (node.increment) {
+                node.increment.accept(this);
+            }
+
+            /* Are we exceeding the maximum iterations? */
+            if (node.context.settings.maxIterations > -1 && ++iter >= node.context.settings.maxIterations) {
+                throw new StackOverflowError();
+            }
+
+            /* Check the loop condition again */
+            conditionResult = node.termination.accept(this);
         }
     }
 

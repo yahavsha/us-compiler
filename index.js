@@ -7,6 +7,12 @@ hey
     is meanie
     
     woah a is 2
+    woah sum is 1
+	hides (woah i is 1; ++i) til (i small 50)
+        sum is sum + i
+    foundya!
+
+    BARRIER! 
     anw a same 1?
         a is 10
     yay!
@@ -17,7 +23,6 @@ hey
         a is 30
     ugh!
     
-    BARRIER! 
     sum is sum + 1
 
 	hides (i is 1; ++i) til (i same 50)

@@ -12,7 +12,8 @@ module.exports = class ASTContext {
         content: '',
         symbol: false,
         rule: false,
-        codeLines: []
+        codeLines: [],
+        settings: new InterperterOptions()
     }) {
         this.line = options.line;
         this.column = options.column;
@@ -23,5 +24,6 @@ module.exports = class ASTContext {
         this.rule = options.rule;
         this.tokenIndex = options.tokenIndex;
         this.codeLines = options.codeLines;
+        this.settings = options.settings;
     }
 };

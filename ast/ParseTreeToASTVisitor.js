@@ -174,6 +174,60 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
 
 
     /**
+     * Executed when a for loop is being performed.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        for_block
+        : FOR LPAREN (expression | declaration)? SEMICOLON expression? RPAREN FOR_TERMINATOR LPAREN expression RPAREN scope? FOR_SUFFIX
+        ;
+     * </code>
+     */
+    visitFor_block(ctx) {
+        /* Setup */
+        let indexDiff = 0; // That'll sync the children index in case some expressions are missing (like ("for (;;)"))
+        let initialization = undefined;
+        let condition = undefined;
+        let increment = undefined;
+        let scope = undefined;
+
+        /* Do we have an initialization? */
+        if (ctx.getChild(2)) {
+            initialization = ctx.getChild(2).accept(this);
+        } else {
+            --indexDiff;
+        }
+
+        /* Do we have an increment? */
+        if (ctx.getChild(4 + indexDiff)) {
+            increment = ctx.getChild(4 + indexDiff).accept(this);
+        } else {
+            --indexDiff;
+        }
+
+        /* Do we hav ea condition? */
+        if (ctx.getChild(10 + indexDiff)) {
+            scope = ctx.getChild(10 + indexDiff).accept(this);
+        } else {
+            --indexDiff;
+        }
+
+        /* Get the loop scope */
+        if (ctx.getChild(8 + indexDiff)) {
+            condition = ctx.getChild(8 + indexDiff).accept(this);
+        }
+
+        return NodeFactory({
+            ctx: this._createContext(ctx),
+            type: ASTNodeType.FORLOOP,
+            args: [initialization, condition, increment, scope]
+        });
+    }
+    
+
+
+    /**
      * Executed when a condition statement is being used.
      * @param {ParsingContext} ctx The parsing context.
      * @return {Node} The result node.
@@ -636,7 +690,8 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
      */
     _createContext(ctx) {
         let context = new ASTContext({
-            codeLines: this.codeLines 
+            codeLines: this.codeLines,
+            settings: this.options
         });
 
         if (this._isSymbol(ctx)) {

@@ -178,7 +178,7 @@ condition_block
 
 // For loop
 for_block
-    : FOR LPAREN expression? SEMICOLON expression? RPAREN FOR_TERMINATOR LPAREN expression RPAREN scope* FOR_SUFFIX
+    : FOR LPAREN (expression | declaration)? SEMICOLON expression? RPAREN FOR_TERMINATOR LPAREN expression RPAREN scope? FOR_SUFFIX
     ;
 
 // While
