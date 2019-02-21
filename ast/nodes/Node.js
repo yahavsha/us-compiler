@@ -17,6 +17,7 @@ module.exports.ASTNodeType = {
     CONDITIONALEXPRESSION:                        11,
     IFSTATEMENT:                        12,
     FORLOOP:                        13,
+    WHILELOOP:                        14,
 };
 
 /**

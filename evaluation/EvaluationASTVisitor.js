@@ -395,6 +395,30 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         }
     }
 
+    /**
+     * A method that's being triggered when the visitor visits a {@link WhileLoopNode}.
+     * @param {ASTNode} node The node that the visitor found while iterating over the tree.
+     * @see WhileLoopNode.accept(ASTVisitor visitor)
+     */
+    visitWhileLoop(node) {
+        debug('visitWhileLoop based on condition: ' + node.condition.toString());
+
+        let conditionResult = node.condition.accept(this);
+        let iter = 0;
+        while (conditionResult.value) {
+            /* Perform the loop body */
+            node.scope.accept(this);
+            
+            /* Are we exceeding the maximum iterations? */
+            if (node.context.settings.maxIterations > -1 && ++iter >= node.context.settings.maxIterations) {
+                throw new StackOverflowError();
+            }
+
+            /* Check the loop condition again */
+            conditionResult = node.condition.accept(this);
+        }
+    }
+
     /*********************** Private helpers ***********************/
 
     /**

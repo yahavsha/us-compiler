@@ -183,7 +183,7 @@ for_block
 
 // While
 while_block
-    : WHILE expression CONDITION_SUFFIX scope* WHILE_SUFFIX
+    : WHILE expression CONDITION_SUFFIX scope WHILE_SUFFIX
     ;
 
 /****************** Conditions Definitions ******************/

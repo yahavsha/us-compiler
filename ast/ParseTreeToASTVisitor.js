@@ -276,6 +276,31 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
         });
     }
 
+
+    /**
+     * Executed when a condition statement is being used.
+     * @param {ParsingContext} ctx The parsing context.
+     * @return {Node} The result node.
+     * @description The invoking rule is:
+     * <code>
+        while_block
+            : WHILE expression CONDITION_SUFFIX scope WHILE_SUFFIX
+            ;
+     * </code>
+     */
+    visitWhile_block(ctx) {
+        /* Get the data */
+        const expression = ctx.getChild(1).accept(this);
+        const scope = ctx.getChild(3).accept(this);
+
+        /* Finalize */
+        return NodeFactory({
+            ctx: this._createContext(ctx),
+            type: ASTNodeType.WHILELOOP,
+            args: [expression, scope]
+        });
+    }
+
     /**
      * Executed when a scope is being evaluated.
      * @param {ParsingContext} ctx The parsing context.
@@ -661,8 +686,7 @@ module.exports = class ParseTreeToASTVisitor extends USVisitor {
     * </code>
     */
    visitPrimary_expression(ctx) {
-        return ctx.getChild(0).accept(this);
-    /*
+        /*
         * We'll get here only an a case of:
         * 1) Terminal node (number, string, a label (a.k.a., variable)) etc.
         * 2) A forward call to an expression, but with parentesis.

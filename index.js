@@ -8,11 +8,16 @@ hey
     
     woah a is 2
     woah sum is 1
+    woah i is 1
+    huh i small^ 5?
+        sum is sum * i++
+    stop!
+
+    BARRIER! 
 	hides (woah i is 1; ++i) til (i small 50)
         sum is sum + i
     foundya!
 
-    BARRIER! 
     anw a same 1?
         a is 10
     yay!
