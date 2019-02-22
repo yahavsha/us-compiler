@@ -5,6 +5,25 @@ var Interperter = require('./interperter');
 let input = `
 hey
     is meanie
+
+    friend bar with (a, b):
+        a is 5
+        b is 6
+    hihi!
+    
+    friend foo with (a, b):
+        a is 2
+        b is 2
+        summons bar with (a, b)
+        gimme a + b
+    hihi!
+
+    woah chocolate is (summons foo with (1, 1))
+    
+    woah a is 1
+
+
+    BARRIER!
     
     friend mul with (a, b):
         gimme a * b
@@ -18,8 +37,9 @@ hey
     shh shh... (summons print with ("Hello " + (summons add with (1, 2))))
     summons print with ("Hello %d!", 5)
 
-    
     woah a is 1
+    RELEASE!
+    
 
     BARRIER! 
     woah a is 2
@@ -117,8 +137,8 @@ byes
         // interperter.setNativeFunction('random', [], m => Math.random());
         let result = await interperter.interpert(input);
 
-        console.log('Execution Result (index.js):');
-        console.log(await result.invokeUserFunction('add', [1, 2]));
+        // console.log('Execution Result (index.js):');
+        // console.log(result.invokeUserFunction('add', [1, 2]));
     } catch (e) {
         // throw e;
         try {

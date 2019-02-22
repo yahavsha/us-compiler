@@ -89,9 +89,9 @@ module.exports = class FunctionSymbol extends Symbol {
      */
     toString() {
         if (this.isUserFunction()) {
-            return `FunctionSymbol [user method] { name = "${this.name}", args = "${this.args}", scope = "${this.data}" }`;
+            return `UserFunctionSymbol(${this.getSignature()}) { scope = "${this.data}" }`;
         } else {
-            return `FunctionSymbol [native method] { name = "${this.name}", args = "${this.args}" }`;
+            return `NativeFunctionSymbol(${this.getSignature()}) { native code }`;
         }
     }
 };

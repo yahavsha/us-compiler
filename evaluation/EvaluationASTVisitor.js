@@ -53,19 +53,66 @@ const Stack = require('../utils/Stack');
 
 /**
  * Defines a class that allows to evaluates and performs the AST instructions.
+ * @descritpion Some notes about the implementation:
+ * 
+ * 1) _isMeanie:
+ *  This can be determined only by one node - IsMeanieInstruction. Thus we just use a plain flag.
+ * 
+ * 2) _callStack:
+ *  This is a simple functions stack trace implementation based on strings stack.
+ *  Each time a FunctionCall occured, we're pushing the called function to the stack.
+ *  Then, after it quits, we pop this value from the stack.
+ * 
+ * 3) _returnStack:
+ *  We need to allow to return values from multiple functions. A returns tatement
+ *  means that we stop to perform every statement and quit the function. To do it
+ *  we're using a stack that contains the returned value on top of it (LIFO). If we got
+ *  anything on the stack, we continue to stop executing inner scopes until we return to the
+ *  visitFunctionCall call. There, we pop the stack value and returns it.
+ * 
+ *  For example:
+ *  ```java
+ *  void foo() { bar(); }
+ *  int bar() {
+ *      for (int = 0; i < 5; i++) {
+ *          return 5;
+ *          if (1 + 1 == 2) {
+ *              return 2;
+ *          }
+ *      }
+ *  }
+ * ```
+ * In this call, when foo executed we'll have the following:
+ *      A. visitFunctionCall: calls bar()
+ *      B. visitForLoop: Executes the loop.
+ *      C. visitReturnStatement: returns 5.
+ * Here, we'll take 5 and push it to the stack and return from the return statement.
+ * Then, the visitForLoop will notice when executing the statemnts one after another that
+ * the _returnStack isn't empty. It has something on top of it. That means we need to pop back.
+ * We'll return from visitForLoop and get back to visitFunctionCall. This function will
+ * pop the value on the stack, and return it.
+ * 
+ * So why do we need stack and can't use plain variable? because when calling multiple functions,
+ * which return values, we need a stack to store them.
+ * 
+ *  4) _symbolsTable:
+ *      The symbols table contains the symbols that's being defined in the program. Each scope takes it's own scope
+ *      thus variables defined in inner scopes won't be availabale at outer scopes.
+ * 5) _globalSymbolTable:
+ *      This is the global symbols table. It contains any global symbol that should be accessed
+ *      from within any portion of the script. Of course, it's a symbol table so it supports scoping as well.
  */
 module.exports = class EvaluationASTVisitor extends ASTVisitor {
     constructor(globalVariables, nativeFunctions) {
         super();
-        this._symbolsTable = new SymbolTable();
+        this._globalSymbolTable = new SymbolTable();
+        this._symbolsTable = new Stack();
         this._isMeanie = false;
-        this._scopeDepth = 0;
         this._callStack = new Stack();
         this._returnStack = new Stack();
 
         if (globalVariables) {
             for (let k in globalVariables) {
-                debug('Adding global variable: ' + k);
                 this.setGlobalVariable(k, globalVariables[k]);
             }
         }
@@ -85,6 +132,8 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      * @param {TypeValue} value The variable value.
      */
     setGlobalVariable(name, value) {
+        debug(`Defining a global variable: ${name} = ${value}`);
+
         this._addSymbol(name, SymbolFactory({
             type: SymbolType.VARIABLE,
             args: [name, value]
@@ -99,12 +148,13 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         if (!(nativeFunction instanceof NativeFunctionDeclaration)) {
             throw new Error('The supplied function must be of type NativeFunctionDeclaration.');
         }
-        debug(`Defining a native function: ${nativeFunction.name} (args = ${nativeFunction.args})`);
 
-        this._addSymbol(nativeFunction.name, SymbolFactory({
+        const symbol = SymbolFactory({
             type: SymbolType.FUNCTION,
             args: [nativeFunction.name, nativeFunction.args, [nativeFunction.pointer, nativeFunction.sendTypeValue]]
-        }));
+        });
+        this._addSymbol(nativeFunction.name, symbol);
+        debug(`Defining a native function: ${symbol.getSignature()}`);
     }
 
     /*********************** Visiting Rules ***********************/
@@ -116,12 +166,12 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      */
     async visitProgram(node) {
         this._isMeanie = node.isMeanie;
-        console.log('-'.repeat(30));
-        console.log('\t\tEvaluating Program Nodes:');
-        console.log('-'.repeat(30));
-        console.log(node.toString());
-        console.log('');
-        console.log('');
+        // console.log('-'.repeat(30));
+        // console.log('\t\tEvaluating Program Nodes:');
+        // console.log('-'.repeat(30));
+        // console.log(node.toString());
+        // console.log('');
+        // console.log('');
 
         if (node.globalScope) {
             /* Add main to the call stack */
@@ -131,12 +181,12 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
             await node.globalScope.accept(this);
         }
 
-        console.log('');
-        console.log('');
-        console.log('-'.repeat(30));
-        console.log('\t\tResult Symbols Table');
-        console.log('-'.repeat(30));
-        console.log(this._symbolsTable.toString());
+        // console.log('');
+        // console.log('');
+        // console.log('-'.repeat(30));
+        // console.log('\t\tResult Symbols Table');
+        // console.log('-'.repeat(30));
+        // console.log(this._globalSymbolTable.toString());
         
         return new EvaluationResult(this);
     }
@@ -208,7 +258,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
 
         /* Assign the lparam to the rparam */
         if ((lparam instanceof VariableSymbol)) {
-            this._updateSymbolTable(node.context, lparam, rparam);
+            await this._updateSymbolTable(node.context, lparam, rparam);
         } else {
             throw new InvalidOperationError(`Invalid Assignment: The supplied lparam is an rvalue.`);
         }
@@ -234,8 +284,8 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         debug('visitArithmeticOperation');
 
         /* Get the lparam and rparam */
-        let lparam = this._getValue(node.lparam);
-        let rparam = this._getValue(node.rparam);
+        let lparam = await this._getValue(node.lparam);
+        let rparam = await this._getValue(node.rparam);
 
         /* Perfomr the computation. Note that it might throw a semantic error */
         try {
@@ -292,7 +342,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
                 new TypeValue(NumberType.getInstance(), 1));
             
             /* Update the symbol table */
-            this._updateSymbolTable(node.context, param, value);
+            await this._updateSymbolTable(node.context, param, value);
     
             /* And return it */
             return param.value;
@@ -330,7 +380,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
                 new TypeValue(NumberType.getInstance(), 1));
             
             /* Update the symbol table */
-            this._updateSymbolTable(node.context, param, value);
+            await this._updateSymbolTable(node.context, param, value);
     
             /* And return it */
             return temp;    
@@ -363,7 +413,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
     async visitCasting(node) {
         /* Simply try to cast this variable */
         try {
-            return node.toType.cast(this._getValue(node.value));
+            return node.toType.cast(await this._getValue(node.value));
         } catch (e) {
             /* We didnt pass a context to this method but the SemanticError Classes demands it. To get around it w/o
             requiring a context in every arithmetic method, we've thrown the exceptions with empty object.
@@ -385,12 +435,12 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         /* Do we got a logical operator & rparam? */
         if (!node.rparam) {
             // Nope so just use the lparam
-            return this._getValue(await node.lparam.accept(this));
+            return await this._getValue(await node.lparam.accept(this));
         }
 
         /* Get the values */
-        let lparam = this._getValue(await node.lparam.accept(this));
-        let rparam = this._getValue(await node.rparam.accept(this));
+        let lparam = await this._getValue(await node.lparam.accept(this));
+        let rparam = await this._getValue(await node.rparam.accept(this));
 
         /* Apply the operator */
         try {
@@ -414,8 +464,8 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         debug(`visitConditionalExpression: ${node}`);
 
         /* Get the values */
-        let lparam = this._getValue(await node.lparam.accept(this));
-        let rparam = this._getValue(await node.rparam.accept(this));
+        let lparam = await this._getValue(await node.lparam.accept(this));
+        let rparam = await this._getValue(await node.rparam.accept(this));
 
         /* Compare them using */
         try {
@@ -444,22 +494,22 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         /* What should we do? */
         if (conditionResult.value) { // << result.value is a standard JS boolean
             /* Create a new scope in the symbols table */
-            this._symbolsTable.enterScope();
+            this._getActiveSymbolTable().enterScope();
 
             /* Perform the is-true code */
             await node.trueScope.accept(this);
 
             /* Exit from the scope */
-            this._symbolsTable.exitScope();
+            this._getActiveSymbolTable().exitScope();
         } else if (typeof(node.falseScope) !== 'undefined') {
             /* Create a new scope in the symbols table */
-            this._symbolsTable.enterScope();
+            this._getActiveSymbolTable().enterScope();
 
             /* Perform the is-false code */
             await node.falseScope.accept(this);
 
             /* Exit from the scope */
-            this._symbolsTable.exitScope();
+            this._getActiveSymbolTable().exitScope();
         }
     }
 
@@ -524,7 +574,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         Both j **and i** are available only at the for scope level, so doing the last line
         is incorrect. If we'll open the scope only at the iteration-level basis, it won't
         allow us to enforce this rule as i will be allocated on the outer scope. */
-        this._symbolsTable.enterScope();
+        this._getActiveSymbolTable().enterScope();
 
         /* Initialize */
         if (node.initialization) {
@@ -552,7 +602,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         }
 
         /* Finalize */
-        this._symbolsTable.exitScope();
+        this._getActiveSymbolTable().exitScope();
     }
 
     /**
@@ -564,7 +614,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         debug('visitWhileLoop based on condition: ' + node.condition.toString());
 
         /* Enter into a new scope */
-        this._symbolsTable.enterScope();
+        this._getActiveSymbolTable().enterScope();
 
         /* Performs the condition */
         let conditionResult = await node.condition.accept(this);
@@ -583,7 +633,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         }
 
         /* Exit from the scope */
-        this._symbolsTable.exitScope();
+        this._getActiveSymbolTable().exitScope();
     }
 
     /**
@@ -610,8 +660,9 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      * @param {ASTCOntext} context The evaluation context.
      */
     _addSymbol(name, symbol, context = {}) {
+        let existingSymbol = this._doSymbolLookup(name);
+
         /* Did we delcared it before? */
-        let existingSymbol = this._symbolsTable.find(name);
         if (existingSymbol != null) {
             if (existingSymbol instanceof VariableSymbol
                 && symbol instanceof VariableSymbol) {
@@ -633,7 +684,11 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         }
         
         /* Do we already have this symbol? */
-        this._symbolsTable.add(name, symbol);
+        if (this._symbolsTable.isEmpty()) {
+            this._globalSymbolTable.add(name, symbol);
+        } else {
+            this._symbolsTable.peek().add(name, symbol);
+        }
     }
 
     /**
@@ -643,7 +698,8 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      * @return {VariableSymbol}
      */
     _variableLookup(context, name) {
-        let symbol = this._symbolsTable.find(name);
+        let symbol = this._doSymbolLookup(name);
+
         if (symbol === null) {
             debug(`Could not find the symbol ${name} in the symbols table.`);
             // If we're in meanie mode, we won't allow to use a variable before it was declared
@@ -676,7 +732,8 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      * @return {VariableSymbol}
      */
     _functionLookup(context, name, sentArgs) {
-        let symbol = this._symbolsTable.find(name);
+        let symbol = this._doSymbolLookup(name);
+        
         if (symbol === null) {
             debug(`Could not find the symbol ${name} in the symbols table.`);
             throw new UnexpectedSymbolError(name, context);
@@ -711,10 +768,44 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
     }
 
     /**
+     * Perfoms the actual symbol lookup in the symbols table stack & global symbols table.
+     * @param {string} name The symbol name.
+     */
+    _doSymbolLookup(name) {
+        debug(`_doSymbolLookup: looking for the symbol "${name}"`);
+        let symbol = undefined;
+        /* If we have a symbol table on the stack, it means we're handling a function.
+           So we need to check if we can find it there. */
+        if (!this._symbolsTable.isEmpty()) {
+            symbol = this._symbolsTable.peek().find(name);
+        }
+
+        if (!symbol) {
+            /* It doesn't exists at the functions symbol tables stack, so look for it at the
+               global symbols table. */
+            symbol = this._globalSymbolTable.find(name);
+        }
+
+        return symbol;
+    }
+
+    /**
+     * Gets the active symbol table.
+     */
+    _getActiveSymbolTable() {
+        if (this._symbolsTable.isEmpty()) {
+            /* We don't have anything on the symbols table stack, so we're in the global scope */
+            return this._globalSymbolTable;
+        } else {
+            return this._symbolsTable.peek();
+        }
+    }
+
+    /**
      * Attempts to get a value from the AST node.
      * @param {ASTNode} node The ast node.
      */
-    _getValue(node) {
+    async _getValue(node) {
         /* Is it the value? lol. We can get here with a value by recursion */
         if (node instanceof TypeValue) {
             return node;
@@ -733,7 +824,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
             return symbol.value;
         } else if (node instanceof ASTNode) {
             /* This is a nested node, so lets parse it */
-            return this._getValue(node.accept(this));
+            return await this._getValue(await node.accept(this));
         }
 
         /* Is it a symbol? */
@@ -750,13 +841,13 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
      * @param {Symbol} symbol 
      * @param {Symbol} newValue 
      */
-    _updateSymbolTable(ctx, symbol, newValue) {
+    async _updateSymbolTable(ctx, symbol, newValue) {
         debug(`Updating symbol table for ${symbol.name} with ${newValue}`);
         if (!(symbol instanceof VariableSymbol)) {
             throw new Error('_updateSymbolTable expects to get a Symbol.');
         }
 
-        newValue = this._getValue(newValue);
+        newValue = await this._getValue(newValue);
 
         if (this._isMeanie) {
             // If we're mean, we won't allow to switch data types
@@ -768,7 +859,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         }
 
         symbol.value = newValue;
-        this._symbolsTable.set(symbol.name, symbol);
+        this._getActiveSymbolTable().set(symbol.name, symbol);
     }
 
     /**
@@ -817,36 +908,24 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
     async _executeUserFunction(node, symbol) {
         /* Get the args */
         let args = await this._executeFunctionGetArgs(node, symbol);
-        console.log(symbol);
-        console.log(args);
-        /* Create a new symbols table scope and register the parameters in it */
-        this._symbolsTable.enterScope();
-        console.log(this._symbolsTable.toString());
+        
+        /* Create a new symbol table in the symbol table stack. Why? because we need it being separated
+           from other variables and functions that were defined at other functions.
+            so "foo(a, b)" and "bar(a, b)" will have their own a and b values. */
+        this._symbolsTable.push(new SymbolTable());
 
         for (let i = 0; i < args.length; i++) {
-            /* Why don't I use this._addSymbol? because it does variables lookup, which'll result in
-               finding variables at outer scopes levels. We need to find it.
-               If we won't code like
-               ```java
-               void foo(int a, int b) {
-                   bar(a + a, b + b);
-               }
-               void bar(int a, int b) { ... }```
-               Wont work, as a and b already "defined" at foo */
-            this._symbolsTable.add(symbol.args[i], SymbolFactory({
+            this._addSymbol(symbol.args[i], SymbolFactory({
                 type: SymbolType.VARIABLE,
                 args: [symbol.args[i], args[i]]
             }), node.context);
         }
 
-        if (this._symbolsTable.scopes._elements.length === 3) {
-        process.exit();
-        }
         /* Visit the node scope, which's the function pointer */
         await symbol.data.accept(this);
 
         /* Exit from the execution scope */
-        this._symbolsTable.exitScope();
+        this._symbolsTable.pop();
 
         /* Do we have any value in the return stack? if we do, that's the vaue
         we're going to return backwards */
@@ -867,7 +946,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
     async _executeFunctionGetArgs(node, symbol) {
         let args = [];
         for (let arg of node.args) {
-            let argValue = await arg.accept(this);
+            let argValue = await this._getValue(await arg.accept(this));
             if (!(argValue instanceof TypeValue)) {
                 throw new UnexpectedSymbolError(symbol.name, node.context);
             }
