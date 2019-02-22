@@ -38,8 +38,8 @@ module.exports = class FunctionCallNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitFunctionCall(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitFunctionCall(this);
+    async accept(visitor) {
+        return await visitor.visitFunctionCall(this);
     }
 
     /**

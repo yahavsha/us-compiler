@@ -35,8 +35,8 @@ module.exports = class VariableReferenceNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitVariableReference(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitVariableReference(this);
+    async accept(visitor) {
+        return await visitor.visitVariableReference(this);
     }
 
     /**

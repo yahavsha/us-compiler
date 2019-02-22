@@ -49,8 +49,8 @@ module.exports = class ValueNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitValue(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitValue(this);
+    async accept(visitor) {
+        return await visitor.visitValue(this);
     }
 
     /**

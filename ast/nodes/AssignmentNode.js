@@ -36,8 +36,8 @@ module.exports = class AssignmentNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTNode.visitAssignment(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitAssignment(this);
+    async accept(visitor) {
+        return await visitor.visitAssignment(this);
     }
 
     /**

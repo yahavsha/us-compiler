@@ -37,8 +37,8 @@ module.exports = class FunctionDeclarationNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitFunctionDeclaration(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitFunctionDeclaration(this);
+    async accept(visitor) {
+        return await visitor.visitFunctionDeclaration(this);
     }
 
     /**

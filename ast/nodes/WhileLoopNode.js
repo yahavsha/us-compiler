@@ -38,8 +38,8 @@ module.exports = class WhileLoopNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitWhileLoop(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitWhileLoop(this);
+    async accept(visitor) {
+        return await visitor.visitWhileLoop(this);
     }
 
     /**

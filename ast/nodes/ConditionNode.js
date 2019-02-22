@@ -47,8 +47,8 @@ module.exports = class ConditionNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitCondition(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitCondition(this);
+    async accept(visitor) {
+        return await visitor.visitCondition(this);
     }
 
     /**

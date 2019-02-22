@@ -49,8 +49,8 @@ module.exports = class ArithmeticOperationNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitArithmeticOperation(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitArithmeticOperation(this);
+    async accept(visitor) {
+        return await visitor.visitArithmeticOperation(this);
     }
 
     /**

@@ -28,6 +28,9 @@ const ExceptionsBasedErrorListener = require('./ExceptionsBasedErrorListener');
 /* Types */
 const { TypesRegistar, TypeValue } = require('../types');
 
+/* Bridging */
+const { NativeFunctionDeclaration } = require('../bridge');
+
 /*****************************************************************************
  * Define the Interperter Facade class
  *****************************************************************************/
@@ -90,10 +93,14 @@ module.exports = class Interperter {
      * @param {*} callback The actual JavaScript callback which'll get fired.
      * @param {*} sendTypeValue Set to true to get {@see TypeValue} instead of native JS values.
      */
-    setNativeFunction(name, args, callback, sendTypeValue = false) {
-        this.nativeFunctions.push({
-            name, args, callback, sendTypeValue
-        });
+    setNativeFunction(func) {
+        if (!(func instanceof NativeFunctionDeclaration)) {
+            if (typeof(func) !== 'object') {
+                throw new Error('The expected func type must be a NativeFunctionDeclaration or options object.');
+            }
+            func = new NativeFunctionDeclaration(func); // We'll treat it as the options object.
+        }
+        this.nativeFunctions.push(func);
     }
 
     /**
@@ -124,7 +131,7 @@ module.exports = class Interperter {
      * Interpert the given code.
      * @param {string} input The interperted code.
      */
-    interpert(input) {
+    async interpert(input) {
         /* Init ANTLR generated Lexer & Parser */
         const lexer = new Lexer.usLexer(new antlr4.InputStream(input));
         const tokens  = new antlr4.CommonTokenStream(lexer);
@@ -146,7 +153,8 @@ module.exports = class Interperter {
         /* Evaluates the tree */
         const EvaluationASTVisitor = require('../evaluation/EvaluationASTVisitor');
         const evaluator = new EvaluationASTVisitor(this.globalVariables, this.nativeFunctions);
-        evaluator.visitProgram(ast);
+
+        await evaluator.visitProgram(ast);
     }
 
     /**************** Private Methods *****************/

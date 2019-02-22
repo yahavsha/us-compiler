@@ -46,8 +46,8 @@ class ScopeNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTNode.visitProgram(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitScope(this);
+    async accept(visitor) {
+        return await visitor.visitScope(this);
     }
 
     /**

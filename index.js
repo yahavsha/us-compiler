@@ -10,8 +10,9 @@ hey
         gimme 1
     hihi!
 
-    (summons print with ("Hello" + (summons random) + "World!"))
-    
+    shh shh... (summons print with ("Hello " + (summons add with (1, 2))))
+    summons print with ("Heys")
+
     
     woah a is 1
 
@@ -94,26 +95,33 @@ hey
 byes
 `;
 
-try {
-    const {WordsType}=require('./types');
-    const interperter = new Interperter();
-    interperter.setGlobalVariable('name', 'Nozomi');
-    interperter.setGlobalVariable('name2', WordsType.getInstance().createValue('Yahav'));
-    interperter.setNativeFunction('print', ['message'], m => console.log('** ' + m + ' **'));
-    interperter.setNativeFunction('random', [], m => Math.random());
-
-
-    interperter.interpert(input);
-} catch (e) {
-    // throw e;
+(async () => {
     try {
-    console.error('\n\n** Error Was Thrown **');
-    console.error(e.message);
-    console.error(e.getUnderlineError());
+        const {WordsType}=require('./types');
+        const interperter = new Interperter();
+        interperter.setGlobalVariable('name', 'Nozomi');
+        interperter.setGlobalVariable('name2', WordsType.getInstance().createValue('Yahav'));
+        interperter.setNativeFunction({
+            name: 'print',
+            args: ['message'],
+            pointer: m => new Promise((accept, reject) => {
+                console.log('[US Compiler] ' + m);
+                accept();
+            })
+        });
+        // interperter.setNativeFunction('random', [], m => Math.random());
+        await interperter.interpert(input);
+    } catch (e) {
+        // throw e;
+        try {
+        console.error('\n\n** Error Was Thrown **');
+        console.error(e.message);
+        console.error(e.getUnderlineError());
 
-    console.error('Stack Trace:');
-    console.error(e.getStackTrace());
-    console.error('');
-    } catch {}
-    throw e;
-}
+        console.error('Stack Trace:');
+        console.error(e.getStackTrace());
+        console.error('');
+        } catch {}
+        throw e;
+    }
+})();

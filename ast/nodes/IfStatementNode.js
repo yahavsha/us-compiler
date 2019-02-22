@@ -40,8 +40,8 @@ module.exports = class IfStatementNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitIfStatement(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitIfStatement(this);
+    async accept(visitor) {
+        return await visitor.visitIfStatement(this);
     }
 
     /**

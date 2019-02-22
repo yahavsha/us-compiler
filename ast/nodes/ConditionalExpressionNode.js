@@ -46,8 +46,8 @@ module.exports = class ConditionalExpressionNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitConditionalExpression(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitConditionalExpression(this);
+    async accept(visitor) {
+        return await visitor.visitConditionalExpression(this);
     }
 
     /**

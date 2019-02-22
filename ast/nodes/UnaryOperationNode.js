@@ -47,8 +47,8 @@ module.exports = class UnaryOperationNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitUnaryOperation(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitUnaryOperation(this);
+    async accept(visitor) {
+        return await visitor.visitUnaryOperation(this);
     }
 
     /**

@@ -35,8 +35,8 @@ module.exports = class ReturnStatementNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitReturnStatement(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitReturnStatement(this);
+    async accept(visitor) {
+        return await visitor.visitReturnStatement(this);
     }
 
     /**

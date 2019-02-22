@@ -36,8 +36,8 @@ module.exports = class ProgramNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTNode.visitProgram(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitProgram(this);
+    async accept(visitor) {
+        return await visitor.visitProgram(this);
     }
     
     /**

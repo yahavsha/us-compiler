@@ -36,8 +36,8 @@ module.exports = class CastingNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitCasting(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitCasting(this);
+    async accept(visitor) {
+        return await visitor.visitCasting(this);
     }
 
     /**

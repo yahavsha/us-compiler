@@ -42,8 +42,8 @@ module.exports = class ForLoopNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitForLoop(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitForLoop(this);
+    async accept(visitor) {
+        return await visitor.visitForLoop(this);
     }
 
     /**

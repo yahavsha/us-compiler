@@ -38,8 +38,8 @@ module.exports = class VariableDeclarationNode extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visitVariableDeclaration(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visitVariableDeclaration(this);
+    async accept(visitor) {
+        return await visitor.visitVariableDeclaration(this);
     }
 
     /**
