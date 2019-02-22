@@ -65,8 +65,8 @@ module.exports = class ${className} extends ASTNode {
      * @param {ASTVisitor} visitor The visitor.
      * @see ASTVisitor.visit${classNameWithoutSuffix}(ASTNode node)
      */
-    accept(visitor) {
-        return visitor.visit${classNameWithoutSuffix}(this);
+    async accept(visitor) {
+        return await visitor.visit${classNameWithoutSuffix}(this);
     }
 
     /**

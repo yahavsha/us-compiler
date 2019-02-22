@@ -42,7 +42,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see ProgramNode.accept(ASTVisitor visitor)
      */
-    visitProgram(node) {
+    async visitProgram(node) {
         /* Implementation */
     }
 
@@ -51,7 +51,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see ScopeNode.accept(ASTVisitor visitor)
      */
-    visitScope(node) {
+    async visitScope(node) {
         /* Implementation */
     }
 
@@ -60,7 +60,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see VariableDeclarationNode.accept(ASTVisitor visitor)
      */
-    visitVariableDeclaration(node) {
+    async visitVariableDeclaration(node) {
         /* Implementation */
     }
 
@@ -69,7 +69,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see AssignmentNode.accept(ASTVisitor visitor)
      */
-    visitAssignment(node) {
+    async visitAssignment(node) {
         /* Implementation */
     }
 
@@ -78,7 +78,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see ValueNode.accept(ASTVisitor visitor)
      */
-    visitValue(node) {
+    async visitValue(node) {
         /* Implementation */
     }
 
@@ -87,7 +87,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see ArithmeticOperationNode.accept(ASTVisitor visitor)
      */
-    visitArithmeticOperation(node) {
+    async visitArithmeticOperation(node) {
         /* Implementation */
     }
 
@@ -96,7 +96,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see UnaryOperationNode.accept(ASTVisitor visitor)
      */
-    visitUnaryOperation(node) {
+    async visitUnaryOperation(node) {
         /* Implementation */
     }
 
@@ -105,7 +105,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see PostfixOperationNode.accept(ASTVisitor visitor)
      */
-    visitPostfixOperation(node) {
+    async visitPostfixOperation(node) {
         /* Implementation */
     }
 
@@ -114,7 +114,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see VariableReferenceNode.accept(ASTVisitor visitor)
      */
-    visitVariableReference(node) {
+    async visitVariableReference(node) {
         /* Implementation */
     }
 
@@ -123,7 +123,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see ConditionNode.accept(ASTVisitor visitor)
      */
-    visitCondition(node) {
+    async visitCondition(node) {
         /* Implementation */
     }
 
@@ -132,7 +132,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see CastingNode.accept(ASTVisitor visitor)
      */
-    visitCasting(node) {
+    async visitCasting(node) {
         /* Implementation */
     }
 
@@ -141,7 +141,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see ConditionalExpressionNode.accept(ASTVisitor visitor)
      */
-    visitConditionalExpression(node) {
+    async visitConditionalExpression(node) {
         /* Implementation */
     }
 
@@ -150,7 +150,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see IfStatementNode.accept(ASTVisitor visitor)
      */
-    visitIfStatement(node) {
+    async visitIfStatement(node) {
         /* Implementation */
     }
 
@@ -159,7 +159,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see ForLoopNode.accept(ASTVisitor visitor)
      */
-    visitForLoop(node) {
+    async visitForLoop(node) {
         /* Implementation */
     }
 
@@ -168,7 +168,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see WhileLoopNode.accept(ASTVisitor visitor)
      */
-    visitWhileLoop(node) {
+    async visitWhileLoop(node) {
         /* Implementation */
     }
 
@@ -177,7 +177,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see FunctionDeclarationNode.accept(ASTVisitor visitor)
      */
-    visitFunctionDeclaration(node) {
+    async visitFunctionDeclaration(node) {
         /* Implementation */
     }
 
@@ -186,7 +186,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see FunctionCallNode.accept(ASTVisitor visitor)
      */
-    visitFunctionCall(node) {
+    async visitFunctionCall(node) {
         /* Implementation */
     }
 
@@ -195,7 +195,7 @@ module.exports = class ASTVisitor {
      * @param {ASTNode} node The node that the visitor found while iterating over the tree.
      * @see ReturnStatementNode.accept(ASTVisitor visitor)
      */
-    visitReturnStatement(node) {
+    async visitReturnStatement(node) {
         /* Implementation */
     }
 };

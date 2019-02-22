@@ -7,11 +7,11 @@ hey
     is meanie
     
     friend add with (a, b):
-        gimme 1
+        gimme a + b
     hihi!
 
     shh shh... (summons print with ("Hello " + (summons add with (1, 2))))
-    summons print with ("Heys")
+    summons print with ("Hello %d!", summons add with (1, 2))
 
     
     woah a is 1
@@ -103,12 +103,12 @@ byes
         interperter.setGlobalVariable('name2', WordsType.getInstance().createValue('Yahav'));
         interperter.setNativeFunction({
             name: 'print',
-            args: ['message'],
-            pointer: m => new Promise((accept, reject) => {
-                console.log('[US Compiler] ' + m);
-                accept();
-            })
+            pointer: (...args) => {
+                let util = require('util');
+                console.log(util.format(... args));
+            }
         });
+
         // interperter.setNativeFunction('random', [], m => Math.random());
         await interperter.interpert(input);
     } catch (e) {

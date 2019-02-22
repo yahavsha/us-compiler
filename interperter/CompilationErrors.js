@@ -360,6 +360,17 @@ class InvalidArgumentsCountError extends SemanticError {
     }
 }
 
+class NativeFunctionError extends SemanticError {
+    constructor(symbol, e, ctx) {
+        super(`The native function ${symbol.getSignature()} threw an exception:\nMessage: ${e.message}`, ctx);
+        
+        this.symbol = symbol;
+        this.e = e;
+
+        Error.captureStackTrace(this, NativeFunctionError);
+    }
+}
+
 /*****************************************************************************
  * Export 'hem all
  * https://www.youtube.com/watch?v=wrCUQuJsDYI ᕙ[ ˵ ͡’ ω ͡’ ˵ ]ᕗ
@@ -381,5 +392,6 @@ module.exports = {
     StackOverflowError,
     AmbiguousSymbolError,
     FunctionAlreadyDefinedError,
-    InvalidArgumentsCountError
+    InvalidArgumentsCountError,
+    NativeFunctionError
 };
