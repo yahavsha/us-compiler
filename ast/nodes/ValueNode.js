@@ -24,9 +24,9 @@ module.exports = class ValueNode extends ASTNode {
     constructor(ctx, type, value) {
         super(ctx);
 
-        if (arguments.length === 0) {
+        if (!type && !value) {
             this.type = NullType.getInstance();
-            this.value = NullType.createValue('');
+            this.value = NullType.getInstance().createValue('');
         } else {
             this.type = PrimitiveType.findFromSymbol(type);
             this.value = this.type.createValue(value);

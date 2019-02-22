@@ -138,10 +138,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         console.log('-'.repeat(30));
         console.log(this._symbolsTable.toString());
         
-        return new EvaluationResult({
-            isMeanie: this._isMeanie,
-            symTable: this._symbolsTable
-        });
+        return new EvaluationResult(this);
     }
 
     /**
@@ -213,7 +210,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         if ((lparam instanceof VariableSymbol)) {
             this._updateSymbolTable(node.context, lparam, rparam);
         } else {
-            throw 'visitAssignment: lparam isnt variable';
+            throw new InvalidOperationError(`Invalid Assignment: The supplied lparam is an rvalue.`);
         }
     }
 
@@ -699,7 +696,9 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
                     throw new InvalidArgumentsCountError(symbol.name, symbol.args.length, argsCount, context);
                 }
             } else {
-                throw 'native functions array args';
+                if (symbol.args.length != sentArgs.length) {
+                    throw new InvalidArgumentsCountError(symbol.name, symbol.args.length, argsCount, context);
+                }
             }
         } else {
             /* User functions are ValueNodes array. We can't know what the user expect to get,
@@ -789,7 +788,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         debug(`Calling the native function ${symbol.name} with the arguments: ${args}`);
 
         /* That's the time we've been waiting forrrrrr!!
-        Yesss!! (✿ ◠ ‿ ◠). Execute it! */
+           Yesss!! (✿ ◠ ‿ ◠). Execute it! */
         let result = undefined;
         try {
             result = symbol.data[0](... args); // Note that the pointer is sandboxed. It doesn't have access to "this".
@@ -818,16 +817,31 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
     async _executeUserFunction(node, symbol) {
         /* Get the args */
         let args = await this._executeFunctionGetArgs(node, symbol);
-
+        console.log(symbol);
+        console.log(args);
         /* Create a new symbols table scope and register the parameters in it */
         this._symbolsTable.enterScope();
+        console.log(this._symbolsTable.toString());
+
         for (let i = 0; i < args.length; i++) {
-            this._addSymbol(symbol.args[i], SymbolFactory({
+            /* Why don't I use this._addSymbol? because it does variables lookup, which'll result in
+               finding variables at outer scopes levels. We need to find it.
+               If we won't code like
+               ```java
+               void foo(int a, int b) {
+                   bar(a + a, b + b);
+               }
+               void bar(int a, int b) { ... }```
+               Wont work, as a and b already "defined" at foo */
+            this._symbolsTable.add(symbol.args[i], SymbolFactory({
                 type: SymbolType.VARIABLE,
                 args: [symbol.args[i], args[i]]
             }), node.context);
         }
 
+        if (this._symbolsTable.scopes._elements.length === 3) {
+        process.exit();
+        }
         /* Visit the node scope, which's the function pointer */
         await symbol.data.accept(this);
 

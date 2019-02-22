@@ -154,7 +154,7 @@ module.exports = class Interperter {
         const EvaluationASTVisitor = require('../evaluation/EvaluationASTVisitor');
         const evaluator = new EvaluationASTVisitor(this.globalVariables, this.nativeFunctions);
 
-        await evaluator.visitProgram(ast);
+        return await evaluator.visitProgram(ast);
     }
 
     /**************** Private Methods *****************/

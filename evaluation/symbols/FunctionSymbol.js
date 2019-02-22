@@ -77,12 +77,10 @@ module.exports = class FunctionSymbol extends Symbol {
     
                     return argsText.join(', ');
                 }
-            } else {
-                throw 'descriptor FuncSymbol.js';
             }
         }
         
-        /* In user functions, the array contains just strings, so lets just text them */
+        /* In user functions (and with native function that uses arrays), the array contains just strings, so lets just text them */
         return this.args.join(', ');
     }
 

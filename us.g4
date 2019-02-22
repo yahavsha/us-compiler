@@ -12,10 +12,6 @@ program
 meanie_instruction:
     ASSIGNMENT MEANIE_PROGRAM
     ;
-
-// global_scope
-//    : function_decl* scope
-//    ;
    
 scope
    : statement+

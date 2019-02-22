@@ -6,12 +6,17 @@ let input = `
 hey
     is meanie
     
-    friend add with (a, b):
-        gimme a + b
+    friend mul with (a, b):
+        gimme a * b
     hihi!
 
+    friend add with (a, b):
+        gimme summons mul with (a + a, b + b)
+    hihi!
+
+
     shh shh... (summons print with ("Hello " + (summons add with (1, 2))))
-    summons print with ("Hello %d!", summons add with (1, 2))
+    summons print with ("Hello %d!", 5)
 
     
     woah a is 1
@@ -110,7 +115,10 @@ byes
         });
 
         // interperter.setNativeFunction('random', [], m => Math.random());
-        await interperter.interpert(input);
+        let result = await interperter.interpert(input);
+
+        console.log('Execution Result (index.js):');
+        console.log(await result.invokeUserFunction('add', [1, 2]));
     } catch (e) {
         // throw e;
         try {
