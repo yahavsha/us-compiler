@@ -8,7 +8,7 @@
  * @author Yahav S.
  */
 
-__US_VERSION = '0.1b';
+__US_VERSION = '0.1';
 
 /*****************************************************************************
  *  Load required libraries
@@ -28,8 +28,12 @@ const ExceptionsBasedErrorListener = require('./ExceptionsBasedErrorListener');
 /* Types */
 const { TypesRegistar, TypeValue } = require('../types');
 
-/* Bridging */
-const { NativeFunctionDeclaration } = require('../bridge');
+/* Evaluation */
+const {
+    EvaluationASTVisitor,
+    NativeFunctionDeclaration
+ } = require('../evaluation');
+        
 
 /*****************************************************************************
  * Define the Interperter Facade class
@@ -50,7 +54,7 @@ module.exports = class Interperter {
         this.errorListeners = [new ExceptionsBasedErrorListener()];
         this.errorsCount = 0;
         this.globalVariables = {};
-        this.nativeFunctions = [];
+        this.nativeFunctions = {};
         this.options = new InterperterOptions();
 
         this.setGlobalVariable('__VERSION__', Interperter.getVersion());
@@ -98,10 +102,14 @@ module.exports = class Interperter {
             if (typeof(func) !== 'object') {
                 throw new Error('The expected func type must be a NativeFunctionDeclaration or options object.');
             }
+
             func = new NativeFunctionDeclaration(func); // We'll treat it as the options object.
         }
-        this.nativeFunctions.push(func);
+        
+        this.nativeFunctions[func.name] = func;
     }
+
+
 
     /**
      * Adds custom error listener.
@@ -151,7 +159,6 @@ module.exports = class Interperter {
         const ast = cstVisitor.start(cst);
 
         /* Evaluates the tree */
-        const EvaluationASTVisitor = require('../evaluation/EvaluationASTVisitor');
         const evaluator = new EvaluationASTVisitor(this.globalVariables, this.nativeFunctions);
 
         return await evaluator.visitProgram(ast);

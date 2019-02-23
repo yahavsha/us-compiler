@@ -277,6 +277,13 @@ class UnexpectedSymbolError extends SemanticError {
     }
 }
 
+class UnknownSymbolError extends SemanticError {
+    constructor(symbol, ctx) {
+        super(`Unknown symbol "${symbol}" detected.`, ctx);
+        Error.captureStackTrace(this, UnexpectedSymbolError);
+    }
+}
+
 class InvalidOperationError extends SemanticError {
     constructor(message, ctx) {
         super(message, ctx);
@@ -382,6 +389,7 @@ module.exports = {
     SyntaxError,
     SemanticError,
     UnexpectedSymbolError,
+    UnknownSymbolError,
     VariableNotDefinedError,
     VariableAlreadyDefinedError,
     InvalidOperationError,

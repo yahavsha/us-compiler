@@ -19,12 +19,13 @@ const Parser = require('../lib/usParser').usParser;
 const EvaluationResult = require('./EvaluationResult');
 
 /* Bridging data */
-const { NativeFunctionDeclaration } = require('../bridge');
+const NativeFunctionDeclaration = require('./NativeFunctionDeclaration');
 
 /* Compilation Errors */
 const {
     SemanticError,
     UnexpectedSymbolError,
+    UnknownSymbolError,
     VariableAlreadyDefinedError,
     VariableNotDefinedError,
     InvalidOperationError,
@@ -118,7 +119,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         }
 
         if (nativeFunctions) {
-            for (let f of nativeFunctions) {
+            for (let f of Object.values(nativeFunctions)) {
                 this.setNativeFunction(f);
             }
         }
@@ -736,7 +737,7 @@ module.exports = class EvaluationASTVisitor extends ASTVisitor {
         
         if (symbol === null) {
             debug(`Could not find the symbol ${name} in the symbols table.`);
-            throw new UnexpectedSymbolError(name, context);
+            throw new UnknownSymbolError(name, context);
         }
 
         /* Is this a variable symbol */
